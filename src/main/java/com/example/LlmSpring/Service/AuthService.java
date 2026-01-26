@@ -4,8 +4,8 @@ import com.example.LlmSpring.DTO.SignUpResponse;
 import com.example.LlmSpring.DTO.SignupRequest;
 import com.example.LlmSpring.Entity.User;
 import com.example.LlmSpring.Repository.UserRepository;
+import org.mindrot.jbcrypt.BCrypt;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,8 +13,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthService {
     @Autowired
     private UserRepository userRepository;
-    @Autowired
-    private PasswordEncoder passwordEncoder;
 
     @Transactional
     public SignUpResponse signUp(SignupRequest req){
@@ -26,7 +24,7 @@ public class AuthService {
             return SignUpResponse.fail("DUP_USERID", "이미 사용 중인 아이디입니다.");
         }
 
-        String hashed = passwordEncoder.encode(req.getPassword());
+        String hashed = BCrypt.hashpw(req.getPassword(), BCrypt.gensalt());
 
         User user = User.builder()
                 .userId(req.getUserId())
