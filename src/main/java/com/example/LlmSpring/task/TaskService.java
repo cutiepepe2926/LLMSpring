@@ -1,5 +1,7 @@
 package com.example.LlmSpring.task;
 
+import com.example.LlmSpring.task.request.TaskRequestDTO;
+import com.example.LlmSpring.task.response.TaskResponseDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

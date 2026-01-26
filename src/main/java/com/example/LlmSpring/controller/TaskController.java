@@ -1,8 +1,8 @@
 package com.example.LlmSpring.controller;
 
 import com.example.LlmSpring.task.TaskCheckListVO;
-import com.example.LlmSpring.task.TaskRequestDTO;
-import com.example.LlmSpring.task.TaskResponseDTO;
+import com.example.LlmSpring.task.request.TaskRequestDTO;
+import com.example.LlmSpring.task.response.TaskResponseDTO;
 import com.example.LlmSpring.task.TaskService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;

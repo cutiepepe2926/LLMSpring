@@ -1,4 +1,4 @@
-package com.example.LlmSpring.task;
+package com.example.LlmSpring.task.request;
 
 import lombok.Data;
 

@@ -1,5 +1,7 @@
-package com.example.LlmSpring.task;
+package com.example.LlmSpring.task.response;
 
+import com.example.LlmSpring.task.TaskCheckListVO;
+import com.example.LlmSpring.task.TaskVO;
 import lombok.Data;
 
 import java.util.List;
