@@ -2,7 +2,10 @@ package com.example.LlmSpring.Util;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.JWTCreator;
+import com.auth0.jwt.JWTVerifier;
 import com.auth0.jwt.algorithms.Algorithm;
+import com.auth0.jwt.interfaces.DecodedJWT;
+import com.example.LlmSpring.LogIn.LogInResponseDTO;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -27,6 +30,24 @@ public class JWTService {
                 .withIssuer("sgn08062");
 
         return builder.sign(algorithm); // 비밀 키로 서명하여 토큰 생성
+    }
 
+    public String verifyTokenAndUserId(String token){
+        try{
+            Algorithm algorithm = Algorithm.HMAC256(secretKey);
+
+            // 검증기 생성
+            JWTVerifier verifier = JWT.require(algorithm)
+                    .withIssuer("sgn08062")
+                    .build();
+            // 토큰 검증 (위조되었거나 만료되면 여기서 예외 발생)
+            DecodedJWT decodeJWT = verifier.verify(token);
+
+            // userId 추출
+            return decodeJWT.getSubject();
+        }
+        catch (Exception e){
+            return e.toString();
+        }
     }
 }
