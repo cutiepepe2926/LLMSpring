@@ -47,7 +47,7 @@ public class JWTService {
             return decodeJWT.getSubject();
         }
         catch (Exception e){
-            return e.toString();
+            return null;
         }
     }
 }
