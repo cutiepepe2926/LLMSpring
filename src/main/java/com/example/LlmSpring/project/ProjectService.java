@@ -1,0 +1,28 @@
+package com.example.LlmSpring.project;
+
+import java.util.List;
+
+public interface ProjectService {
+
+    // 프로젝트 생성 기능 (생성된 프로젝트 ID 반환)
+    int createProject(ProjectCreateDTO dto);
+
+    // 프로젝트 수정 기능
+    int updateProject(int projectId, ProjectUpdateDTO dto);
+
+    // 프로젝트 상태 수정 기능
+    int updateProjectStatus(int projectId, String status);
+
+    // 프로젝트 삭제
+    int deleteProject(int projectId);
+
+    // 사용자가 참여중인 프로젝트 목록 조회 (ACTIVE만)
+    List<ProjectVO> getActiveProjects(String userId);
+
+    // 사용자가 참여중인 프로젝트 목록 조회 (DONE만)
+    List<ProjectVO> getDoneProjects(String userId);
+
+    // 사용자가 참여중인 삭제 예정인 프로젝트 목록 조회
+    List<ProjectVO> getTrashProjects(String userId);
+
+}
