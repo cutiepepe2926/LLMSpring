@@ -6,6 +6,7 @@ import com.example.LlmSpring.SignUp.SignUpResponseDTO;
 import com.example.LlmSpring.SignUp.SignupRequestDTO;
 import com.example.LlmSpring.User.UserMapper;
 import com.example.LlmSpring.User.UserVO;
+import com.example.LlmSpring.Util.JWTService;
 import org.mindrot.jbcrypt.BCrypt;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -16,6 +17,8 @@ public class AuthService {
 
     @Autowired
     private UserMapper userMapper;
+    @Autowired
+    private JWTService jwtService;
 
     @Transactional
     public SignUpResponseDTO signUp(SignupRequestDTO req){
@@ -49,11 +52,10 @@ public class AuthService {
         }
 
         String hashPw = userMapper.getHashPw(req.getUserId());
-        System.out.println("입력된 비밀번호: " + req.getPassword() + "\n해시 비밀번호: " + hashPw);
         if(BCrypt.checkpw(req.getPassword(), hashPw)){
-            // 비밀번호
             String userName = userMapper.getUserName(userId);
-            return LogInResponseDTO.ok(userName);
+            String token = jwtService.createToken(userId, userName);
+            return LogInResponseDTO.ok(userName, token);
         }else{
             // 비밀번호 오류
             return LogInResponseDTO.fail("PASSWORD_ERROR", "비밀번호가 틀렸습니다");

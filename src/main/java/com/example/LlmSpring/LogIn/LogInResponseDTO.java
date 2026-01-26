@@ -10,12 +10,13 @@ public class LogInResponseDTO {
     private String code;
     private String message;
     private String userName;
+    private String token;
 
-    public static LogInResponseDTO ok(String userName){
-        return new LogInResponseDTO(true,"SUCCESS_LOGIN",userName+"님 환영합니다!", userName);
+    public static LogInResponseDTO ok(String userName, String token){
+        return new LogInResponseDTO(true,"SUCCESS_LOGIN",userName+"님 환영합니다!", userName, token);
     }
 
     public static LogInResponseDTO fail(String code, String message){
-        return new LogInResponseDTO(false, code, message, null);
+        return new LogInResponseDTO(false, code, message, null, null);
     }
 }
