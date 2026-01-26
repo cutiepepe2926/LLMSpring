@@ -22,4 +22,12 @@
         SELECT EXISTS (SELECT 1 FROM User WHERE user_id = #{userId})
     </select>
 
+    <select id="getHashPw" parameterType="string" resultType="string">
+        SELECT password_hash FROM User WHERE user_id = #{userId}
+    </select>
+
+    <select id="getUserName" parameterType="string" resultType="string">
+        SELECT name FROM User WHERE user_id = #{userId}
+    </select>
+
 </mapper>

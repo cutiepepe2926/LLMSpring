@@ -1,5 +1,7 @@
 package com.example.LlmSpring.Auth;
 
+import com.example.LlmSpring.LogIn.LogInResponseDTO;
+import com.example.LlmSpring.LogIn.LoginRequestDTO;
 import com.example.LlmSpring.SignUp.SignUpResponseDTO;
 import com.example.LlmSpring.SignUp.SignupRequestDTO;
 import com.example.LlmSpring.User.UserMapper;
@@ -37,5 +39,24 @@ public class AuthService {
         userMapper.save(user);
 
         return SignUpResponseDTO.ok(user.getUserId(), user.getEmail());
+    }
+
+    public LogInResponseDTO login(LoginRequestDTO req){
+        String userId = req.getUserId();
+        // 아이디가 없을 경우
+        if(!userMapper.existsByUserId(userId)){
+            return LogInResponseDTO.fail("NO_USERID", "입력된 아이디가 없습니다.");
+        }
+
+        String hashPw = userMapper.getHashPw(req.getUserId());
+        System.out.println("입력된 비밀번호: " + req.getPassword() + "\n해시 비밀번호: " + hashPw);
+        if(BCrypt.checkpw(req.getPassword(), hashPw)){
+            // 비밀번호
+            String userName = userMapper.getUserName(userId);
+            return LogInResponseDTO.ok(userName);
+        }else{
+            // 비밀번호 오류
+            return LogInResponseDTO.fail("PASSWORD_ERROR", "비밀번호가 틀렸습니다");
+        }
     }
 }
