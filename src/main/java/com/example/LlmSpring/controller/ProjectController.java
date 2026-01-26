@@ -1,9 +1,9 @@
 package com.example.LlmSpring.controller;
 
-import com.example.LlmSpring.project.ProjectCreateDTO;
+import com.example.LlmSpring.project.request.ProjectCreateRequestDTO;
 import com.example.LlmSpring.project.ProjectService;
-import com.example.LlmSpring.project.ProjectStatusDTO;
-import com.example.LlmSpring.project.ProjectUpdateDTO;
+import com.example.LlmSpring.project.request.ProjectStatusRequestDTO;
+import com.example.LlmSpring.project.request.ProjectUpdateRequestDTO;
 import com.example.LlmSpring.project.ProjectVO;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,9 +30,11 @@ public class ProjectController {
 
     // 프로젝트 생성 API 진입점
     @PostMapping
-    public ResponseEntity<Integer> createProject(@RequestBody ProjectCreateDTO dto) {
+    public ResponseEntity<Integer> createProject(
+            @RequestBody ProjectCreateRequestDTO dto,
+            @RequestParam("userId") String userId) {
         // 서비스 호출을 통해 프로젝트 생성 로직 실행
-        int projectId = projectService.createProject(dto);
+        int projectId = projectService.createProject(dto, userId);
 
         // 생성 완료 후 생성된 ID와 함께 201 Created 응답
         return ResponseEntity.status(HttpStatus.CREATED).body(projectId);
@@ -42,7 +44,7 @@ public class ProjectController {
     @PutMapping("/{projectId}")
     public ResponseEntity<String> updateProject(
             @PathVariable("projectId") int projectId,
-            @RequestBody ProjectUpdateDTO dto) {
+            @RequestBody ProjectUpdateRequestDTO dto) {
 
         int result = projectService.updateProject(projectId, dto);
 
@@ -58,7 +60,7 @@ public class ProjectController {
     @PatchMapping("/{projectId}/status")
     public ResponseEntity<String> updateProjectStatus(
             @PathVariable("projectId") int projectId,
-            @RequestBody ProjectStatusDTO dto) {
+            @RequestBody ProjectStatusRequestDTO dto) {
 
         int result = projectService.updateProjectStatus(projectId, dto.getStatus());
 
@@ -104,6 +106,25 @@ public class ProjectController {
             list = new ArrayList<>();
         }
         return ResponseEntity.ok(list);
+    }
+
+    @PostMapping("/{projectId}/restore")
+    public ResponseEntity<String> restoreProject(
+            @PathVariable("projectId") int projectId,
+            @RequestParam("userId") String userId) { // 프로젝트 삭제 취소 API
+
+        try {
+            int result = projectService.restoreProject(projectId, userId);
+
+            if (result == 1) {
+                return ResponseEntity.ok("프로젝트가 성공적으로 복구되었습니다.");
+            } else {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("복구 처리 중 오류가 발생했습니다.");
+            }
+        } catch (RuntimeException e) {
+            // 도메인 규칙 위반 시 에러 메시지 반환
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+        }
     }
 
 }

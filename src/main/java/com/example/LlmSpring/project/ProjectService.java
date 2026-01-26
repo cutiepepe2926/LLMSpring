@@ -1,14 +1,16 @@
 package com.example.LlmSpring.project;
 
+import com.example.LlmSpring.project.request.ProjectCreateRequestDTO;
+import com.example.LlmSpring.project.request.ProjectUpdateRequestDTO;
 import java.util.List;
 
 public interface ProjectService {
 
     // 프로젝트 생성 기능 (생성된 프로젝트 ID 반환)
-    int createProject(ProjectCreateDTO dto);
+    int createProject(ProjectCreateRequestDTO dto, String ownerId);
 
     // 프로젝트 수정 기능
-    int updateProject(int projectId, ProjectUpdateDTO dto);
+    int updateProject(int projectId, ProjectUpdateRequestDTO dto);
 
     // 프로젝트 상태 수정 기능
     int updateProjectStatus(int projectId, String status);
@@ -24,5 +26,8 @@ public interface ProjectService {
 
     // 사용자가 참여중인 삭제 예정인 프로젝트 목록 조회
     List<ProjectVO> getTrashProjects(String userId);
+
+    // 삭제 취소 기능 추가
+    int restoreProject(int projectId, String userId);
 
 }

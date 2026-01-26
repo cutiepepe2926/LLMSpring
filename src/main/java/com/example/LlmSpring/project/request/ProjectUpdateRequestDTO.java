@@ -1,11 +1,11 @@
-package com.example.LlmSpring.project;
+package com.example.LlmSpring.project.request;
 
 import lombok.Data;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 @Data
-public class ProjectUpdateDTO {
+public class ProjectUpdateRequestDTO {
     private String name;
     private String description;
     private String gitUrl;

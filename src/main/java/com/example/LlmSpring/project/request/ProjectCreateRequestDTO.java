@@ -1,4 +1,4 @@
-package com.example.LlmSpring.project;
+package com.example.LlmSpring.project.request;
 
 import java.time.LocalDateTime;
 import lombok.Data;
@@ -8,7 +8,7 @@ import java.util.List;
 // 클라이언트의 요청 데이터를 담는 객체
 
 @Data
-public class ProjectCreateDTO {
+public class ProjectCreateRequestDTO {
     private String name;            // name 매핑
     private String description;     // description 매핑
     private String gitUrl;        // github_repo_url 매핑

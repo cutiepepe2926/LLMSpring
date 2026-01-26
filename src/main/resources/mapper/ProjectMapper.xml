@@ -27,14 +27,10 @@
 
     <!--  1-2. 초기 멤버들 목록 삽입  -->
     <insert id="insertProjectMembers">
-        INSERT INTO ProjectMember (
-        project_id,
-        user_id,
-        role,
-        status
-        ) VALUES
-        <foreach collection="memberIds" item="memberId" separator=",">
-            (#{projectId}, #{memberId}, 'MEMBER', 'INVITED')
+        INSERT INTO ProjectMember (project_id, user_id, role, status, joined_at)
+        VALUES
+        <foreach collection="members" item="m" separator=",">
+            (#{m.projectId}, #{m.userId}, #{m.role}, #{m.status}, #{m.joinedAt})
         </foreach>
     </insert>
 
@@ -120,7 +116,30 @@
            INNER JOIN ProjectMember pm ON p.project_id = pm.project_id
         WHERE pm.user_id = #{userId}
           AND p.deleted_at IS NOT NULL  ORDER BY p.deleted_at DESC
-  </select>
+    </select>
 
+    <!-- 7. 프로젝트의 삭제 예정 시간을 가져오기   -->
+    <select id="selectProjectForRestore" resultType="com.example.LlmSpring.project.ProjectVO">
+        SELECT
+            project_id,
+            name,
+            deleted_at
+        FROM Project
+        WHERE project_id = #{projectId}
+    </select>
+
+    <!-- 8. ProjectMember 테이블에서 특정 유저의 역할을 문자열로 반환해서 요청자가 OWNER인지 대조   -->
+    <select id="getProjectRole" resultType="string">
+        SELECT role
+        FROM ProjectMember
+        WHERE project_id = #{projectId} AND user_id = #{userId}
+    </select>
+
+    <!-- 9.  deleted_at 컬럼을 다시 NULL로 업데이트  -->
+    <update id="restoreProject">
+        UPDATE Project
+        SET deleted_at = NULL
+        WHERE project_id = #{projectId}
+    </update>
 
 </mapper>

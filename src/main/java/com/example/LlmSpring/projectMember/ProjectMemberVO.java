@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-class ProjectMemberVO {
+public class ProjectMemberVO {
 
     private Integer projectId;    // project_id (FK, PK)
     private String userId;        // user_id (FK, PK)
