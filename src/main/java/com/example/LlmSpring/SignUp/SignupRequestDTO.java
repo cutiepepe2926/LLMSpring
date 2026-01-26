@@ -1,9 +1,9 @@
-package com.example.LlmSpring.DTO;
+package com.example.LlmSpring.SignUp;
 
 import lombok.Data;
 
 @Data
-public class SignupRequest {
+public class SignupRequestDTO {
     private String userId;
 
     private String email;

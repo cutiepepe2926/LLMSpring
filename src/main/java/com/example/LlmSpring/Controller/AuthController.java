@@ -1,8 +1,8 @@
 package com.example.LlmSpring.Controller;
 
-import com.example.LlmSpring.DTO.SignUpResponse;
-import com.example.LlmSpring.DTO.SignupRequest;
-import com.example.LlmSpring.Service.AuthService;
+import com.example.LlmSpring.SignUp.SignUpResponseDTO;
+import com.example.LlmSpring.SignUp.SignupRequestDTO;
+import com.example.LlmSpring.Auth.AuthService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,8 +16,8 @@ public class AuthController {
     AuthService authService;
 
     @PostMapping("/signUp")
-    public ResponseEntity<SignUpResponse> signUp(@RequestBody SignupRequest req){
-        SignUpResponse res = authService.signUp(req);
+    public ResponseEntity<SignUpResponseDTO> signUp(@RequestBody SignupRequestDTO req){
+        SignUpResponseDTO res = authService.signUp(req);
 
         if(res.isSuccess()){
             return ResponseEntity.status(201).body(res);

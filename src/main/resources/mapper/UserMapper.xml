@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.LlmSpring.User.UserMapper">
+    <insert id="save" parameterType="UserVO">
+        INSERT INTO User(
+            user_id, password_hash, name, email, reg_date, file_path, deleted_at,
+            github_id, github_token
+        ) VALUES (
+            #{userId}, #{passwordHash}, #{name}, #{email}, NOW(), #{filePath}, #{deletedAt},
+            #{githubId}, #{githubToken}
+        )
+    </insert>
+
+    <select id="existsByEmail" parameterType="string" resultType="boolean">
+        SELECT EXISTS (SELECT 1 FROM User WHERE email = #{email})
+    </select>
+
+    <select id="existsByUserId" parameterType="string" resultType="boolean">
+        SELECT EXISTS (SELECT 1 FROM User WHERE user_id = #{userId})
+    </select>
+
+</mapper>
