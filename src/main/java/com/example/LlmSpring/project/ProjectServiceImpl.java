@@ -18,6 +18,13 @@ public class ProjectServiceImpl implements ProjectService {
 
     private final ProjectMapper projectMapper;
 
+    /**
+     * 프로젝트 생성 및 멤버 초기화
+     * 1. 프로젝트 정보를 생성합니다.
+     * 2. 생성자를 해당 프로젝트의 'OWNER' 및 'JOINED' 상태로 등록합니다.
+     * 3. 초대된 멤버들을 'MEMBER' 및 'INVITED' 상태로 일괄 등록합니다.
+     * @Transactional을 통해 이 모든 과정이 하나라도 실패하면 전체 롤백됩니다.
+     */
     @Override
     @Transactional(rollbackFor = Exception.class) // 예외 발생 시 롤백
     public int createProject(ProjectCreateRequestDTO dto, String ownerId) { // 프로젝트 생성
@@ -38,7 +45,7 @@ public class ProjectServiceImpl implements ProjectService {
         // 2. 통합 멤버 리스트 생성
         List<ProjectMemberVO> membersToInsert = new ArrayList<>();
 
-        // 2-1. 생성자(Owner) 추가: JOINED 상태
+        // 2-1. 생성자(Owner) 자동 등록: 본인이 만든 것이므로 즉시 JOINED 상태
         membersToInsert.add(ProjectMemberVO.builder()
                 .projectId(projectId)
                 .userId(ownerId)
@@ -47,27 +54,31 @@ public class ProjectServiceImpl implements ProjectService {
                 .joinedAt(LocalDateTime.now())
                 .build());
 
-        // 2-2. 초대 멤버들 추가: INVITED 상태
+        // 2-2. 초대 멤버 등록: 수락이 필요한 INVITED 상태
         if (dto.getMembers() != null && !dto.getMembers().isEmpty()) {
             for (String memberId : dto.getMembers()) {
-                // 소유자가 초대 명단에 중복 포함된 경우 제외
-                if (!memberId.equals(ownerId)) {
+
+                if (!memberId.equals(ownerId)) { // 중복 등록 방지
                     membersToInsert.add(ProjectMemberVO.builder()
                             .projectId(projectId)
                             .userId(memberId)
                             .role("MEMBER")
-                            .status("INVITED") // 요구사항 반영
+                            .status("INVITED")
                             .build());
                 }
             }
         }
 
-        // 3. Mapper를 통한 Bulk Insert 실행
+        // 3. 일괄 삽입 실행
         projectMapper.insertProjectMembers(membersToInsert);
 
         return projectId;
     }
 
+    /**
+     * 프로젝트 상세 정보 수정
+     * ACTIVE 상태이며 삭제되지 않은 프로젝트만 수정 가능
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int updateProject(int projectId, ProjectUpdateRequestDTO dto) { // 프로젝트 내용 수정
@@ -85,12 +96,19 @@ public class ProjectServiceImpl implements ProjectService {
         return projectMapper.updateProject(project);
     }
 
+    /**
+     * 프로젝트 상태 변경 (ACTIVE <-> DONE)
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int updateProjectStatus(int projectId, String status) { // 프로젝트 ACTIVE <-> DONE(아카이브) 상태 변경
         return projectMapper.updateProjectStatus(projectId, status);
     }
 
+    /**
+     * [Soft Delete] 프로젝트 삭제 유예 처리
+     * 즉시 삭제하지 않고 현재 시간으로부터 7일 뒤를 삭제 예정일로 기록합니다.
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int deleteProject(int projectId) { // 프로젝트 soft_delete
@@ -100,7 +118,9 @@ public class ProjectServiceImpl implements ProjectService {
         return projectMapper.deleteProject(projectId, deleteDate);
     }
 
-    // VO를 목록용 DTO로 변환하는 공통 메서드
+    /**
+     * VO를 클라이언트용 목록 DTO로 변환하는 공통 메서드
+     */
     private ProjectListResponseDTO convertToProjectListDTO(ProjectVO vo) {
         return ProjectListResponseDTO.builder()
                 .projectId(vo.getProjectId())
@@ -112,6 +132,9 @@ public class ProjectServiceImpl implements ProjectService {
                 .build();
     }
 
+    /**
+     * 사용자가 참여 중인 상태별 프로젝트 목록 조회 (ACTIVE)
+     */
     @Override
     public List<ProjectListResponseDTO> getActiveProjects(String userId) { // 사용자가 참여중인 ACTIVE 상태의 프로젝트 목록 조회
 
@@ -123,6 +146,9 @@ public class ProjectServiceImpl implements ProjectService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * 사용자가 참여 중인 상태별 프로젝트 목록 조회 (DONE)
+     */
     @Override
     public List<ProjectListResponseDTO> getDoneProjects(String userId) { // 사용자가 참여중인 DONE 상태의 프로젝트 목록 조회
         return projectMapper.getDoneProjectList(userId).stream()
@@ -130,6 +156,9 @@ public class ProjectServiceImpl implements ProjectService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * 사용자가 참여 중인 상태별 프로젝트 목록 조회 (TRASH)
+     */
     @Override
     public List<ProjectListResponseDTO> getTrashProjects(String userId) { // 사용자가 참여중인 삭제 예정의 프로젝트 목록 조회
         return projectMapper.getTrashProjectList(userId).stream()
@@ -137,6 +166,11 @@ public class ProjectServiceImpl implements ProjectService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * [도메인 규칙] 프로젝트 삭제 취소 (복구)
+     * 1. 요청 유저가 해당 프로젝트의 소유자(OWNER)인지 확인합니다.
+     * 2. 삭제 대기 상태이며 유예 기간(7일)이 경과하지 않았는지 확인합니다.
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int restoreProject(int projectId, String userId) { // 삭제 취소 요청
