@@ -77,6 +77,13 @@ public class TaskService {
         vo.setBranch(requestDTO.getBranch());
         vo.setDueDate(requestDTO.getDueDate());
         taskMapper.updateTask(vo);
+
+        if (requestDTO.getAssigneeIds() != null) {
+            taskMapper.deleteTaskUsers(taskId);
+            for (String userId : requestDTO.getAssigneeIds()) {
+                taskMapper.insertTaskUser(taskId, userId);
+            }
+        }
     }
 
     //6. 삭제

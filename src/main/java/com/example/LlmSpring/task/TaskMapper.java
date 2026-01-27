@@ -20,6 +20,7 @@ public interface TaskMapper {
     // 담당자 (TaskUser)
     void insertTaskUser(@Param("taskId") Long taskId, @Param("userId") String userId);
     List<String> selectTaskUsers(Long taskId);
+    void deleteTaskUsers(Long taskId);
 
     // 체크리스트
     List<TaskCheckListVO> selectCheckLists(Long taskId);
