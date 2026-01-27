@@ -12,4 +12,5 @@ public interface UserMapper {
     String getUserName(String userId);
 
     UserVO getUserInfo(String userId);
+    UserVO getUserFullInfo(String userId);
 }

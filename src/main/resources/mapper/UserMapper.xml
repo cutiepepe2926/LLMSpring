@@ -36,4 +36,10 @@
         WHERE user_id = #{userId}
     </select>
 
+    <select id="getUserFullInfo" parameterType="string" resultType="UserVO">
+        SELECT name, user_id, email, reg_date, github_id
+        FROM User
+        WHERE user_id = #{userId}
+    </select>
+
 </mapper>

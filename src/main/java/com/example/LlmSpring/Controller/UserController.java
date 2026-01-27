@@ -38,4 +38,25 @@ public class UserController {
             return ResponseEntity.status(404).body("User not found");
         }
     }
+
+    @GetMapping("/fullInfo")
+    public ResponseEntity<?> getUserFullInfo(@RequestParam String token){
+        System.out.println("사용자 모든 정보 받기 위해 진입");
+
+        String userId = jwtService.verifyTokenAndUserId(token);
+        UserVO userVO = userService.getUserFullInfo(userId);
+
+        if (userVO != null) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("name", userVO.getName());
+            response.put("userId", userVO.getUserId());
+            response.put("email", userVO.getEmail());
+            response.put("regDate",  userVO.getRegDate());
+            response.put("githubId", userVO.getGithubId());
+
+            return ResponseEntity.ok(response);
+        }else{
+            return ResponseEntity.status(404).body("User not found");
+        }
+    }
 }
