@@ -2,6 +2,7 @@ package com.example.LlmSpring.Config;
 
 import com.example.LlmSpring.User.UserMapper;
 import com.example.LlmSpring.User.UserVO;
+import com.example.LlmSpring.Util.EncryptionUtil;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
@@ -25,6 +26,9 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
     @Autowired
     private OAuth2AuthorizedClientService oAuth2AuthorizedClientService;
+
+    @Autowired
+    private EncryptionUtil encryptionUtil;
 
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
         // 1. Github 에서 넘어온 정보 추출
@@ -91,7 +95,9 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         // 5. DB 업데이트
         if(user != null){
             user.setGithubId(githubId);
-            user.setGithubToken(accessToken);
+
+            String encryptedToken = encryptionUtil.encrypt(accessToken);
+            user.setGithubToken(encryptedToken);
 
             userMapper.updateGithubInfo(user);
             System.out.println("깃허브 연동 성공: " + user.getUserId());
