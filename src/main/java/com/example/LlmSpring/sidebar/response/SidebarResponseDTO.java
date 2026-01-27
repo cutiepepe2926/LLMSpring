@@ -8,10 +8,10 @@ import java.util.List;
 @Data
 public class SidebarResponseDTO {
     //즐겨찾기한 프로젝트 목록
-    private List<SidebarResponseDTO> favorites = new ArrayList<>();
+    private List<SidebarProjectDTO> favorites = new ArrayList<>();
 
     //전체 프로젝트 목록
-    private List<SidebarResponseDTO> projects = new ArrayList<>();
+    private List<SidebarProjectDTO> projects = new ArrayList<>();
 
     @Data
     public static class SidebarProjectDTO {
