@@ -55,7 +55,7 @@ public class AuthService {
         if(BCrypt.checkpw(req.getPassword(), hashPw)){
             String userName = userMapper.getUserName(userId);
             String token = jwtService.createToken(userId, userName);
-            return LogInResponseDTO.ok(userName, token);
+            return LogInResponseDTO.ok(userId, token);
         }else{
             // 비밀번호 오류
             return LogInResponseDTO.fail();

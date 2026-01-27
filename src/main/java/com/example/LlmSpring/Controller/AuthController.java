@@ -40,7 +40,7 @@ public class AuthController {
         }
 
         return switch(res.getCode()){
-            case "NO_USERID", "PASSWORD_ERROR" -> ResponseEntity.status(401).body(res);
+            case "FAIL_LOGIN" -> ResponseEntity.status(401).body(res);
             default -> ResponseEntity.status(400).body(res);
         };
     }

@@ -9,11 +9,11 @@ public class LogInResponseDTO {
     private boolean success;
     private String code;
     private String message;
-    private String userName;
+    private String userId;
     private String token;
 
-    public static LogInResponseDTO ok(String userName, String token){
-        return new LogInResponseDTO(true,"SUCCESS_LOGIN",userName+"님 환영합니다!", userName, token);
+    public static LogInResponseDTO ok(String userId, String token){
+        return new LogInResponseDTO(true,"SUCCESS_LOGIN",userId+"님 환영합니다!", userId, token);
     }
 
     public static LogInResponseDTO fail(){
