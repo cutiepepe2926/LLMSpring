@@ -1,8 +1,10 @@
 package com.example.LlmSpring.projectMember;
 
 import com.example.LlmSpring.projectMember.request.ProjectMemberInviteRequestDTO;
+import com.example.LlmSpring.projectMember.request.ProjectMemberRemoveRequestDTO;
 import com.example.LlmSpring.projectMember.request.ProjectMemberRoleRequestDTO;
 import com.example.LlmSpring.projectMember.response.ProjectMemberResponseDTO;
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -123,5 +125,84 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
         // 8. 업데이트 실행
         projectMemberMapper.updateMemberRole(projectId, targetId, newRole);
     }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void removeMember(int projectId, String requesterId, ProjectMemberRemoveRequestDTO dto) {
+        String targetId = dto.getTargetUserId();
+        String action = dto.getAction();
+
+        // 1. 기본 정보 조회
+        String requesterRole = projectMemberMapper.getProjectRole(projectId, requesterId);
+        ProjectMemberVO targetMember = projectMemberMapper.selectMemberRaw(projectId, targetId);
+
+        // 대상 존재 여부 및 활성 상태 확인
+        if (targetMember == null || targetMember.getDeletedAt() != null) {
+            throw new RuntimeException("해당 프로젝트의 활성 멤버가 아닙니다.");
+        }
+
+        // 2. 액션별 비즈니스 로직 분기
+        switch (action) {
+            case "추방":
+                validateExpulsion(requesterRole, targetMember);
+                break;
+            case "나가기":
+                validateLeave(requesterId, targetId, requesterRole);
+                break;
+            case "초대취소":
+                validateCancelInvite(requesterRole, targetMember);
+                break;
+            default:
+                throw new RuntimeException("잘못된 작업 이름입니다.");
+        }
+
+        // 3. 소프트 델리트 실행
+        projectMemberMapper.deleteMember(projectId, targetId, LocalDateTime.now());
+    }
+
+    // [추방 로직]
+    private void validateExpulsion(String requesterRole, ProjectMemberVO target) {
+        // 관리자 권한 확인
+        if (!"OWNER".equals(requesterRole) && !"ADMIN".equals(requesterRole)) {
+            throw new RuntimeException("추방 권한이 없습니다.");
+        }
+        // 상위 권한 침범 방지: ADMIN은 MEMBER만 추방 가능
+        if ("ADMIN".equals(requesterRole) && !"MEMBER".equals(target.getRole())) {
+            throw new RuntimeException("ADMIN은 다른 ADMIN이나 OWNER를 추방할 수 없습니다.");
+        }
+        // OWNER 추방 불가
+        if ("OWNER".equals(target.getRole())) {
+            throw new RuntimeException("프로젝트 소유자는 추방할 수 없습니다.");
+        }
+        // 상태 불일치 확인
+        if (!"ACTIVE".equals(target.getStatus())) {
+            throw new RuntimeException("참여 중인 멤버만 추방할 수 있습니다.");
+        }
+    }
+
+    // [나가기 로직]
+    private void validateLeave(String requesterId, String targetId, String requesterRole) {
+        // 타인 강제 퇴출 방지
+        if (!requesterId.equals(targetId)) {
+            throw new RuntimeException("본인만 '나가기'를 수행할 수 있습니다.");
+        }
+        // OWNER 나가기 불가
+        if ("OWNER".equals(requesterRole)) {
+            throw new RuntimeException("소유자는 프로젝트를 나갈 수 없습니다. 소유권 이전이 필요합니다.");
+        }
+    }
+
+    // [초대취소 로직]
+    private void validateCancelInvite(String requesterRole, ProjectMemberVO target) {
+        // ADMIN 이상 권한 확인
+        if (!"OWNER".equals(requesterRole) && !"ADMIN".equals(requesterRole)) {
+            throw new RuntimeException("초대 취소 권한이 없습니다.");
+        }
+        // 상태 확인: 오직 INVITED 상태만 취소 가능
+        if (!"INVITED".equals(target.getStatus())) {
+            throw new RuntimeException("초대 대기 중인 사용자만 취소를 수행할 수 있습니다.");
+        }
+    }
+
 
 }

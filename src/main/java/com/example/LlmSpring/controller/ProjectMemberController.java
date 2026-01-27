@@ -2,6 +2,7 @@ package com.example.LlmSpring.controller;
 
 import com.example.LlmSpring.projectMember.ProjectMemberService;
 import com.example.LlmSpring.projectMember.request.ProjectMemberInviteRequestDTO;
+import com.example.LlmSpring.projectMember.request.ProjectMemberRemoveRequestDTO;
 import com.example.LlmSpring.projectMember.request.ProjectMemberRoleRequestDTO;
 import com.example.LlmSpring.projectMember.response.ProjectMemberResponseDTO;
 import lombok.RequiredArgsConstructor;
@@ -69,6 +70,25 @@ public class ProjectMemberController {
             return ResponseEntity.ok("멤버의 역할이 성공적으로 변경되었습니다.");
         } catch (RuntimeException e) {
             // 보안 및 비즈니스 규칙 위반 시 400 에러 반환
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
+    }
+
+    /**
+     * 멤버 제거 API (추방, 나가기, 초대취소)
+     * POST /api/projects/{projectId}/members/remove?userId={currentUserId}
+     */
+    @PostMapping("/{projectId}/members/remove")
+    public ResponseEntity<String> removeMember(
+            @PathVariable("projectId") int projectId,
+            @RequestParam("userId") String userId,
+            @RequestBody ProjectMemberRemoveRequestDTO dto) {
+
+        try {
+            projectMemberService.removeMember(projectId, userId, dto);
+            String message = dto.getAction() + " 처리가 완료되었습니다.";
+            return ResponseEntity.ok(message);
+        } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }
     }
