@@ -1,5 +1,6 @@
 package com.example.LlmSpring.controller;
 
+import com.example.LlmSpring.github.GithubBranchResponseDTO;
 import com.example.LlmSpring.github.GithubService;
 import com.example.LlmSpring.util.JWTService;
 import lombok.RequiredArgsConstructor;
@@ -8,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
@@ -29,12 +31,34 @@ public class GithubController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("유효하지 않거나 만료된 토큰입니다.");
         }
         try{
-            List<String> branches = githubService.getProjectBranches(projectId, userId);
+            List<GithubBranchResponseDTO> branches = githubService.getProjectBranches(projectId, userId);
             return ResponseEntity.ok(branches);
         }catch (IllegalArgumentException e){
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }catch (Exception e){
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/{projectId}/commits")
+    public ResponseEntity<?> getCommitsBySha(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable Long projectId,
+            @RequestParam("sha") String sha){
+        String token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : authHeader;
+        String userId = jwtService.verifyTokenAndUserId(token);
+
+        if(userId == null){
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("유효하지 않거나 만료된 토큰입니다.");
+        }
+
+        try {
+            List<Map<String, Object>> commits = githubService.getCommitsBySha(projectId, userId, sha);
+            return ResponseEntity.ok(commits);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("커밋 로그 조회 중 오류가 발생했습니다: " + e.getMessage());
         }
     }
 }
