@@ -119,15 +119,6 @@ public class GithubService {
         return fetchCommitsFromGithub(repoInfo[0], repoInfo[1], sha, decryptedToken);
     }
 
-    private String[] parseRepoUrl(String repoUrl) {
-        String[] parts = repoUrl.replace(".git", "").split("/");
-        if (parts.length < 2) {
-            throw new IllegalArgumentException("잘못된 GitHub 저장소 URL입니다.");
-        }
-        return new String[]{parts[parts.length - 2], parts[parts.length - 1]};
-    }
-
-
     private List<Map<String, Object>> fetchCommitsFromGithub(String owner, String repo, String sha, String token) {
         RestTemplate restTemplate = new RestTemplate();
         HttpHeaders headers = new HttpHeaders();
@@ -163,5 +154,16 @@ public class GithubService {
             throw new RuntimeException("GitHub 커밋 로그 조회 실패: " + e.getMessage());
         }
         return resultList;
+    }
+
+
+
+
+    private String[] parseRepoUrl(String repoUrl) {
+        String[] parts = repoUrl.replace(".git", "").split("/");
+        if (parts.length < 2) {
+            throw new IllegalArgumentException("잘못된 GitHub 저장소 URL입니다.");
+        }
+        return new String[]{parts[parts.length - 2], parts[parts.length - 1]};
     }
 }
