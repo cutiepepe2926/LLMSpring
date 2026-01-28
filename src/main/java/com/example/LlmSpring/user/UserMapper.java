@@ -1,9 +1,11 @@
 package com.example.LlmSpring.user;
 
+import org.apache.ibatis.annotations.Mapper;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
+@Mapper
 public interface UserMapper {
     int save(UserVO userVO);
     boolean existsByEmail(String email);
