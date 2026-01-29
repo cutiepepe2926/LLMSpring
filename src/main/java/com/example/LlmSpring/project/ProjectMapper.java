@@ -1,5 +1,6 @@
 package com.example.LlmSpring.project;
 
+import com.example.LlmSpring.project.response.ProjectListResponseDTO;
 import com.example.LlmSpring.projectMember.ProjectMemberVO;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -49,6 +50,15 @@ public interface ProjectMapper {
     // 11. 프로젝트 정보 조회
     ProjectVO selectProjectById(@Param("projectId") Long projectId);
 
-    // 특정 프로젝트 내에서 ACTIVE 상태이며 삭제되지 않은 멤버의 수를 반환(이슈 담당자 생성 관련)
+    // 12. 특정 프로젝트 내에서 ACTIVE 상태이며 삭제되지 않은 멤버의 수를 반환(이슈 담당자 생성 관련)
     int countActiveProjectMembers(@Param("projectId") int projectId, @Param("userIds") List<String> userIds);
+
+    // 13. 사용자가 참여 중인 프로젝트의 상세 통계 정보를 포함한 목록 조회
+    List<ProjectListResponseDTO> getDetailedActiveProjectList(@Param("userId") String userId);
+
+    // 14. 완료된 프로젝트 상세 조회 (추가)
+    List<ProjectListResponseDTO> getDetailedDoneProjectList(@Param("userId") String userId);
+
+    // 15. 휴지통 프로젝트 상세 조회 (추가)
+    List<ProjectListResponseDTO> getDetailedTrashProjectList(@Param("userId") String userId);
 }

@@ -161,4 +161,65 @@
         FROM Project
         WHERE project_id = #{projectId}
     </select>
+
+    <select id="getDetailedActiveProjectList" resultType="com.example.LlmSpring.project.response.ProjectListResponseDTO">
+        SELECT
+            p.project_id AS projectId,
+            p.name,
+            p.status,
+            p.start_date AS startDate,
+            p.end_date AS endDate,
+            -- 총 업무 수 집계
+            (SELECT COUNT(*) FROM Task t WHERE t.project_id = p.project_id) AS totalTaskCount,
+            -- 완료된 업무 수 집계 (status = 'DONE')
+            (SELECT COUNT(*) FROM Task t WHERE t.project_id = p.project_id AND t.status = 'DONE') AS completedTaskCount,
+            -- 완료되지 않은 이슈 수 집계 (status != 'DONE')
+            (SELECT COUNT(*) FROM Issue i WHERE i.project_id = p.project_id AND i.status != 'DONE') AS openIssueCount,
+            -- 참여 멤버 수 집계 (활성 상태 멤버 기준)
+            (SELECT COUNT(*) FROM ProjectMember pm2 WHERE pm2.project_id = p.project_id AND pm2.status = 'ACTIVE') AS memberCount
+        FROM Project p
+            INNER JOIN ProjectMember pm ON p.project_id = pm.project_id
+        WHERE pm.user_id = #{userId}
+          AND p.status = 'ACTIVE'
+          AND p.deleted_at IS NULL
+        ORDER BY p.project_id DESC
+    </select>
+
+    <select id="getDetailedDoneProjectList" resultType="com.example.LlmSpring.project.response.ProjectListResponseDTO">
+        SELECT
+            p.project_id AS projectId,
+            p.name,
+            p.status,
+            p.start_date AS startDate,
+            p.end_date AS endDate,
+            (SELECT COUNT(*) FROM Task t WHERE t.project_id = p.project_id) AS totalTaskCount,
+            (SELECT COUNT(*) FROM Task t WHERE t.project_id = p.project_id AND t.status = 'DONE') AS completedTaskCount,
+            (SELECT COUNT(*) FROM Issue i WHERE i.project_id = p.project_id AND i.status != 'DONE') AS openIssueCount,
+            (SELECT COUNT(*) FROM ProjectMember pm2 WHERE pm2.project_id = p.project_id AND pm2.status = 'ACTIVE') AS memberCount
+        FROM Project p
+            INNER JOIN ProjectMember pm ON p.project_id = pm.project_id
+        WHERE pm.user_id = #{userId}
+          AND p.status = 'DONE'
+          AND p.deleted_at IS NULL
+        ORDER BY p.updated_at DESC
+    </select>
+
+    <select id="getDetailedTrashProjectList" resultType="com.example.LlmSpring.project.response.ProjectListResponseDTO">
+        SELECT
+            p.project_id AS projectId,
+            p.name,
+            p.status,
+            p.start_date AS startDate,
+            p.end_date AS endDate,
+            p.deleted_at AS deletedAt,
+            (SELECT COUNT(*) FROM Task t WHERE t.project_id = p.project_id) AS totalTaskCount,
+            (SELECT COUNT(*) FROM Task t WHERE t.project_id = p.project_id AND t.status = 'DONE') AS completedTaskCount,
+            (SELECT COUNT(*) FROM Issue i WHERE i.project_id = p.project_id AND i.status != 'DONE') AS openIssueCount,
+            (SELECT COUNT(*) FROM ProjectMember pm2 WHERE pm2.project_id = p.project_id AND pm2.status = 'ACTIVE') AS memberCount
+        FROM Project p
+            INNER JOIN ProjectMember pm ON p.project_id = pm.project_id
+        WHERE pm.user_id = #{userId}
+          AND p.deleted_at IS NOT NULL
+        ORDER BY p.deleted_at DESC
+    </select>
 </mapper>

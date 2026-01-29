@@ -1,8 +1,10 @@
 package com.example.LlmSpring.project.response;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import java.time.LocalDateTime;
+import lombok.NoArgsConstructor;
 
 /**
  * 프로젝트 목록 조회 시 반환되는 요약 정보 객체
@@ -11,6 +13,8 @@ import java.time.LocalDateTime;
 
 @Data
 @Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class ProjectListResponseDTO {
     private Integer projectId;      // 프로젝트 ID
     private String name;           // 프로젝트 이름
@@ -18,4 +22,9 @@ public class ProjectListResponseDTO {
     private LocalDateTime startDate; // 시작일
     private LocalDateTime endDate;   // 마감일
     private LocalDateTime deletedAt; // 휴지통 목록 조회 시 삭제 예정일 확인용
+
+    private int totalTaskCount;     // 총 업무(Task) 수
+    private int completedTaskCount; // 완료된 업무(DONE) 수
+    private int openIssueCount;     // 완료되지 않은 이슈 수
+    private int memberCount;        // 프로젝트 참여 멤버 수
 }

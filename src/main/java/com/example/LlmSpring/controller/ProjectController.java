@@ -177,32 +177,28 @@ public class ProjectController {
      */
     @GetMapping
     public ResponseEntity<?> getProjectList(
-            @RequestHeader("Authorization") String authHeader, // 헤더에서 토큰 수신
-            @RequestParam(value = "type", defaultValue = "active") String type) { // 사용자가 참여중인 프로젝트 목록 조회
+            @RequestHeader("Authorization") String authHeader,
+            @RequestParam(value = "type", defaultValue = "active") String type) {
 
-        // 1. 헤더에서 토큰 추출 (Bearer 접두어 제거)
+        // JWT 토큰 검증 및 사용자 식별
         String token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : authHeader;
-
-        // 2. JWT 토큰 검증 및 userId 추출
         String userId = jwtService.verifyTokenAndUserId(token);
 
-        // 3. 토큰이 유효하지 않은 경우 예외 처리
         if (userId == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("유효하지 않거나 만료된 토큰입니다.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("유효하지 않은 토큰입니다.");
         }
 
-        // 4. 추출된 userId를 사용하여 로직 수행
         List<ProjectListResponseDTO> list;
 
-        if ("active".equals(type)) {
-            list = projectService.getActiveProjects(userId);
-        } else if ("done".equals(type)) {
+        // 전달된 type 파라미터에 따라 적절한 서비스 메서드 호출
+        if ("done".equals(type)) {
             list = projectService.getDoneProjects(userId);
         } else if ("trash".equals(type)) {
             list = projectService.getTrashProjects(userId);
         } else {
-            list = new ArrayList<>();
+            list = projectService.getActiveProjects(userId);
         }
+
         return ResponseEntity.ok(list);
     }
 
