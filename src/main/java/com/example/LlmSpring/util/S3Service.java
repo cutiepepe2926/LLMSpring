@@ -14,7 +14,7 @@ import java.util.UUID;
 public class S3Service {
     private final S3Template s3Template;
 
-    @Value("${spring.cloud.aws.s3.bucket")
+    @Value("${spring.cloud.aws.s3.bucket}")
     private String bucketName;
 
     // 프로필 이미지 업로드

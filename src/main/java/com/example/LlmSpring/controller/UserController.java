@@ -4,12 +4,12 @@ import com.example.LlmSpring.user.UserVO;
 import com.example.LlmSpring.user.UserService;
 import com.example.LlmSpring.user.response.UserSearchResponseDTO;
 import com.example.LlmSpring.util.JWTService;
-import com.example.LlmSpring.util.S3Service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -124,7 +124,7 @@ public class UserController {
             }
 
             userService.updateProfile(userId, nickname, file);
-            return ResponseEntity.ok("프로필이 수정되었습니다");
+            return ResponseEntity.ok(Collections.singletonMap("message", "프로필이 수정되었습니다"));
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("프로필 수정 실패: " + e.getMessage());
