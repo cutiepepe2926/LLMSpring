@@ -48,4 +48,7 @@ public interface ProjectMapper {
 
     // 11. 프로젝트 정보 조회
     ProjectVO selectProjectById(@Param("projectId") Long projectId);
+
+    // 특정 프로젝트 내에서 ACTIVE 상태이며 삭제되지 않은 멤버의 수를 반환(이슈 담당자 생성 관련)
+    int countActiveProjectMembers(@Param("projectId") int projectId, @Param("userIds") List<String> userIds);
 }
