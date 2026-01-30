@@ -8,15 +8,16 @@
         SELECT
             p.project_id AS projectId,
             p.name AS name,
-            CASE WHEN pf.favorite_id IS NOT NULL THEN 1 ELSE 0 END AS isFavorite
-        FROM Project p
-                 JOIN ProjectMember pm ON p.project_id = pm.project_id
-                 LEFT JOIN ProjectFavorite pf ON p.project_id = pf.project_id AND pf.user_id = #{userId}
+            p.status AS status,
+            p.start_date AS startDate,
+            p.end_date AS endDate,
+            pm.is_favorite AS isFavorite  FROM Project p
+                                                   JOIN ProjectMember pm ON p.project_id = pm.project_id
         WHERE pm.user_id = #{userId}
           AND p.deleted_at IS NULL
           AND pm.deleted_at IS NULL
           AND p.status = 'ACTIVE'
-        ORDER BY isFavorite DESC, p.name ASC
+        ORDER BY pm.is_favorite DESC, p.name ASC
     </select>
 
     <select id="selectProjectInfo" resultType="map">
@@ -44,4 +45,23 @@
         ORDER BY t.priority DESC, t.due_date ASC
             LIMIT 5
     </select>
+
+    <select id="existsFavorite" resultType="int">
+        SELECT COUNT(*)
+        FROM ProjectMember
+        WHERE project_id = #{projectId}
+          AND user_id = #{userId}
+          AND is_favorite = 1  </select>
+
+    <update id="insertFavorite">
+        UPDATE ProjectMember
+        SET is_favorite = 1    WHERE project_id = #{projectId}
+                                 AND user_id = #{userId}
+    </update>
+
+    <update id="deleteFavorite">
+        UPDATE ProjectMember
+        SET is_favorite = 0    WHERE project_id = #{projectId}
+                                 AND user_id = #{userId}
+    </update>
 </mapper>

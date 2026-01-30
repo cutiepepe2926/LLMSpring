@@ -22,6 +22,7 @@ public class ProjectListResponseDTO {
     private LocalDateTime startDate; // 시작일
     private LocalDateTime endDate;   // 마감일
     private LocalDateTime deletedAt; // 휴지통 목록 조회 시 삭제 예정일 확인용
+    private boolean favorite; // 즐겨찾기 여부
 
     private int totalTaskCount;     // 총 업무(Task) 수
     private int completedTaskCount; // 완료된 업무(DONE) 수

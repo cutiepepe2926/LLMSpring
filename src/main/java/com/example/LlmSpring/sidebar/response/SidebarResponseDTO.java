@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -24,5 +25,8 @@ public class SidebarResponseDTO {
         private Integer projectId;
         private String name;
         private boolean isFavorite;
+        private String status;
+        private LocalDateTime startDate;
+        private LocalDateTime endDate;
     }
 }

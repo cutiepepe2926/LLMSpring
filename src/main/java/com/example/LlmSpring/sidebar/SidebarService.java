@@ -4,6 +4,7 @@ import com.example.LlmSpring.sidebar.response.ProjectSidebarResponseDTO;
 import com.example.LlmSpring.sidebar.response.SidebarResponseDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -27,7 +28,7 @@ public class SidebarService {
 
             //즐겨찾기
             if (project.isFavorite()) {
-                response.getProjects().add(project);
+                response.getFavorites().add(project);
             }
         }
         return response;
@@ -55,5 +56,22 @@ public class SidebarService {
         response.setMyTasks(sidebarMapper.selectMyActiveTasks(projectId, userId));
 
         return response;
+    }
+
+    //즐겨찾기
+    @Transactional
+    public boolean toggleFavorite(Long projectId, String userId) {
+        // 1. 이미 즐겨찾기인지 확인
+        int count = sidebarMapper.existsFavorite(projectId, userId);
+
+        if (count > 0) {
+            // 이미 있으면 -> 삭제 (해제)
+            sidebarMapper.deleteFavorite(projectId, userId);
+            return false; // 결과: 즐겨찾기 아님(false)
+        } else {
+            // 없으면 -> 추가 (등록)
+            sidebarMapper.insertFavorite(projectId, userId);
+            return true; // 결과: 즐겨찾기 됨(true)
+        }
     }
 }

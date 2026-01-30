@@ -76,7 +76,8 @@
             p.end_date,
             p.github_repo_url,
             p.daily_report_time,
-            p.status
+            p.status,
+            pm.is_favorite AS favorite
         FROM Project p
                  INNER JOIN ProjectMember pm ON p.project_id = pm.project_id
         WHERE pm.user_id = #{userId}
@@ -169,6 +170,7 @@
             p.status,
             p.start_date AS startDate,
             p.end_date AS endDate,
+            pm.is_favorite AS favorite,
             -- 총 업무 수 집계
             (SELECT COUNT(*) FROM Task t WHERE t.project_id = p.project_id) AS totalTaskCount,
             -- 완료된 업무 수 집계 (status = 'DONE')
@@ -194,6 +196,7 @@
             p.status,
             p.start_date AS startDate,
             p.end_date AS endDate,
+            pm.is_favorite AS favorite,
             (SELECT COUNT(*) FROM Task t WHERE t.project_id = p.project_id) AS totalTaskCount,
             (SELECT COUNT(*) FROM Task t WHERE t.project_id = p.project_id AND t.status = 'DONE') AS completedTaskCount,
             (SELECT COUNT(*) FROM Issue i WHERE i.project_id = p.project_id AND i.status != 'DONE') AS openIssueCount,

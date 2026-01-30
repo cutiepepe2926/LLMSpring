@@ -79,4 +79,12 @@
           AND deleted_at IS NULL
     </update>
 
+    <update id="toggleProjectFavorite">
+        UPDATE ProjectMember
+        SET is_favorite = NOT is_favorite
+        WHERE project_id = #{projectId}
+          AND user_id = #{userId}
+          AND deleted_at IS NULL
+    </update>
+
 </mapper>

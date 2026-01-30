@@ -39,4 +39,21 @@ public class SidebarController {
 
         return ResponseEntity.ok(sidebarService.getProjectSidebar(projectId, userId));
     }
+
+    // 즐겨찾기 등록/해제 (토글)
+    @PostMapping("/projects/{projectId}/favorite")
+    public ResponseEntity<?> toggleFavorite(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable("projectId") Long projectId) {
+
+        String token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : null;
+        String userId = jWTService.verifyTokenAndUserId(token);
+        if (userId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+
+        // 서비스 호출
+        boolean isFavorite = sidebarService.toggleFavorite(projectId, userId);
+
+        // 결과 리턴 (true면 등록됨, false면 해제됨)
+        return ResponseEntity.ok(isFavorite);
+    }
 }
