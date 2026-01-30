@@ -16,13 +16,12 @@ public class TaskService {
 
     private final TaskMapper taskMapper;
 
-    //1. 업무 생성
     @Transactional
     public void createTask(Long projectId, String userId, TaskRequestDTO requestDTO) {
         TaskVO vo = new TaskVO();
         vo.setProjectId(projectId);
         vo.setTitle(requestDTO.getTitle());
-        vo.setUserId("user1"); // security에서 추출
+        vo.setUserId(userId);
         vo.setBranch(requestDTO.getBranch());
         vo.setPriority(requestDTO.getPriority());
         vo.setDueDate(requestDTO.getDueDate());
@@ -31,18 +30,14 @@ public class TaskService {
 
         taskMapper.insertTask(vo);
 
-        //담당자 저장
         if (requestDTO.getAssigneeIds() != null) {
             for (String assigneeId : requestDTO.getAssigneeIds()) {
                 taskMapper.insertTaskUser(vo.getTaskId(), assigneeId);
             }
         }
-
-        //로그 기록
-        insertLog(vo.getTaskId(), "Create", "업무 생성", userId);
+        insertLog(vo.getTaskId(), "CREATE", "업무를 생성했습니다.", userId);
     }
 
-    //2. 업무 목록 조회
     public List<TaskResponseDTO> getTaskList(Long projectId) {
         List<TaskVO> tasks = taskMapper.selectTasksByProjectId(projectId);
         return tasks.stream().map(task -> {
@@ -52,7 +47,6 @@ public class TaskService {
         }).collect(Collectors.toList());
     }
 
-    //3. 업무 상세 조회
     public TaskResponseDTO getTaskDetail(Long taskId) {
         TaskVO task = taskMapper.selectTaskById(taskId);
         if (task == null) throw new IllegalArgumentException("Task not found");
@@ -63,14 +57,12 @@ public class TaskService {
         return dto;
     }
 
-    //4. 상태 변경
     @Transactional
     public void updateStatus(Long taskId, String userId, String status) {
         taskMapper.updateTaskStatus(taskId, status);
-        insertLog(taskId, "STATUS", "상태 변경: " + status, userId);
+        insertLog(taskId, "STATUS", "상태를 [" + status + "]로 변경했습니다.", userId);
     }
 
-    //5. 업무 수정
     @Transactional
     public void updateTask(Long taskId, String userId, TaskRequestDTO requestDTO) {
         TaskVO vo = new TaskVO();
@@ -80,9 +72,10 @@ public class TaskService {
         vo.setPriority(requestDTO.getPriority());
         vo.setBranch(requestDTO.getBranch());
         vo.setDueDate(requestDTO.getDueDate());
-        taskMapper.updateTask(vo);
 
-        //담당자 갱신
+        taskMapper.updateTask(vo);
+        insertLog(taskId, "UPDATE", "업무 상세 정보를 수정했습니다.", userId);
+
         if (requestDTO.getAssigneeIds() != null) {
             taskMapper.deleteTaskUsers(taskId);
             for (String assigneeId : requestDTO.getAssigneeIds()) {
@@ -91,33 +84,37 @@ public class TaskService {
         }
     }
 
-    //6. 삭제
     @Transactional
     public void deleteTask(Long taskId) {
         taskMapper.softDeleteTask(taskId);
     }
 
-    //체크리스트
     public List<TaskCheckListVO> getCheckLists(Long taskId) {
         return taskMapper.selectCheckLists(taskId);
     }
 
-    public void addCheckList(Long taskId, String content) {
+    @Transactional
+    public void addCheckList(Long taskId, String userId, String content) {
         TaskCheckListVO vo = new TaskCheckListVO();
         vo.setTaskId(taskId);
         vo.setContent(content);
         taskMapper.insertCheckList(vo);
+        insertLog(taskId, "CHECKLIST", "새 할 일 [" + content + "] 추가", userId);
     }
 
-    public void deleteCheckList(Long checklistId) {
+    @Transactional
+    public void deleteCheckList(Long taskId, Long checklistId, String userId) {
         taskMapper.deleteCheckList(checklistId);
+        insertLog(taskId, "CHECKLIST", "체크리스트 항목 삭제", userId);
     }
 
-    public void toggleCheckList(Long checklistId, boolean isDone) {
+    @Transactional
+    public void toggleCheckList(Long checklistId, boolean isDone, Long taskId, String userId) {
         taskMapper.updateCheckListStatus(checklistId, isDone);
+        String action = isDone ? "완료" : "미완료";
+        insertLog(taskId, "CHECKLIST", "항목을 [" + action + "] 상태로 변경", userId);
     }
 
-    //채팅 & 로그
     public List<Map<String, Object>> getChats(Long taskId) {
         return taskMapper.selectChats(taskId);
     }

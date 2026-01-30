@@ -9,7 +9,7 @@ import java.util.Map;
 public interface TaskMapper {
     // 업무
     void insertTask(TaskVO taskVO);
-    List<TaskVO> selectTasksByProjectId(Long projectId);
+    List<TaskVO> selectTasksByProjectId(@Param("projectId") Long projectId);
     TaskVO selectTaskById(Long taskId);
     void updateTaskStatus(@Param("taskId") Long taskId, @Param("status") String status);
     void updateTask(TaskVO taskVO);

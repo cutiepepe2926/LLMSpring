@@ -27,34 +27,39 @@ public class TaskController {
         return jwtService.verifyTokenAndUserId(token);
     }
 
-    //1. 업무 생성
+    // 1. 업무 생성
     @PostMapping
-    public ResponseEntity<String> createTask(
+    public ResponseEntity<Map<String, String>> createTask(
             @RequestHeader("Authorization") String authHeader,
-            @PathVariable Long projectID,
+            @PathVariable Long projectId,
             @RequestBody TaskRequestDTO requestDTO) {
         String userId = getUserId(authHeader);
         if (userId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 
-        taskService.createTask(projectID, userId, requestDTO);
-        return ResponseEntity.status(HttpStatus.CREATED).body("Created");
+        taskService.createTask(projectId, userId, requestDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("message", "Created"));
     }
 
-    //2. 업무 목록 조회
+    // 2. 업무 목록 조회
     @GetMapping
-    public ResponseEntity<List<TaskResponseDTO>> getTaskList(@PathVariable Long projectID) {
-        return ResponseEntity.ok(taskService.getTaskList(projectID));
+    public ResponseEntity<List<TaskResponseDTO>> getTaskList(@PathVariable Long projectId) {
+        return ResponseEntity.ok(taskService.getTaskList(projectId));
     }
 
-    //3. 상세 조회
+    // 3. 상세 조회
     @GetMapping("/{taskId}")
     public ResponseEntity<TaskResponseDTO> getTaskDetail(@PathVariable Long taskId) {
         return ResponseEntity.ok(taskService.getTaskDetail(taskId));
     }
 
-    //4. 상태 변경
+    // 4. 업무 상태 변경 (드래그 앤 드롭 전용)
+    @CrossOrigin(
+            origins = "*",
+            methods = {RequestMethod.PATCH, RequestMethod.OPTIONS},
+            allowedHeaders = "*"
+    )
     @PatchMapping("/{taskId}/status")
-    public ResponseEntity<String> updateTaskStatus(
+    public ResponseEntity<Map<String, String>> updateStatus(
             @RequestHeader("Authorization") String authHeader,
             @PathVariable Long taskId,
             @RequestBody Map<String, String> body) {
@@ -62,12 +67,12 @@ public class TaskController {
         if (userId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 
         taskService.updateStatus(taskId, userId, body.get("status"));
-        return ResponseEntity.ok("Status updated");
+        return ResponseEntity.ok(Map.of("message", "Status Updated"));
     }
 
-    //5. 수정
+    // 5. 업무 수정
     @PutMapping("/{taskId}")
-    public ResponseEntity<String> updateTask(
+    public ResponseEntity<Map<String, String>> updateTask(
             @RequestHeader("Authorization") String authHeader,
             @PathVariable Long taskId,
             @RequestBody TaskRequestDTO requestDTO) {
@@ -75,41 +80,56 @@ public class TaskController {
         if (userId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 
         taskService.updateTask(taskId, userId, requestDTO);
-        return ResponseEntity.ok("Updated");
+        return ResponseEntity.ok(Map.of("message", "Updated"));
     }
 
-    //6. 삭제
+    // 6. 삭제
     @DeleteMapping("/{taskId}")
-    public ResponseEntity<String> deleteTask(@PathVariable Long taskId) {
+    public ResponseEntity<Map<String, String>> deleteTask(@PathVariable Long taskId) {
         taskService.deleteTask(taskId);
-        return ResponseEntity.ok("Deleted");
+        return ResponseEntity.ok(Map.of("message", "Deleted"));
     }
 
-    //체크리스트
+    // --- 체크리스트 ---
+
     @GetMapping("/{taskId}/checklists")
     public List<TaskCheckListVO> getCheckLists(@PathVariable Long taskId) {
         return taskService.getCheckLists(taskId);
     }
 
     @PostMapping("/{taskId}/checklists")
-    public String addCheckList(@PathVariable Long taskId, @RequestBody Map<String, String> body) {
-        taskService.addCheckList(taskId, body.get("content"));
-        return "Checklist Added";
+    public ResponseEntity<Map<String, String>> addCheckList(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable Long taskId,
+            @RequestBody Map<String, String> body) {
+        String userId = getUserId(authHeader);
+        taskService.addCheckList(taskId, userId, body.get("content"));
+        return ResponseEntity.ok(Map.of("message", "Checklist Added"));
     }
 
     @DeleteMapping("/{taskId}/checklists/{checklistId}")
-    public Map<String, String> deleteCheckList(@PathVariable Long checklistId) {
-        taskService.deleteCheckList(checklistId);
-        return Map.of("message", "삭제되었습니다.");
+    public ResponseEntity<Map<String, String>> deleteCheckList(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable Long taskId,
+            @PathVariable Long checklistId) {
+        String userId = getUserId(authHeader);
+        taskService.deleteCheckList(taskId, checklistId, userId);
+        return ResponseEntity.ok(Map.of("message", "Deleted"));
     }
 
     @PatchMapping("/{taskId}/checklists/{checklistId}")
-    public String toggleCheckList(@PathVariable Long checklistId, @RequestBody Map<String, Boolean> body) {
-        taskService.toggleCheckList(checklistId, body.get("is_done"));
-        return "Toggled";
+    public ResponseEntity<Map<String, String>> toggleCheckList(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable Long taskId,
+            @PathVariable Long checklistId,
+            @RequestBody Map<String, Boolean> body) {
+        String userId = getUserId(authHeader);
+        taskService.toggleCheckList(checklistId, body.get("is_done"), taskId, userId);
+        return ResponseEntity.ok(Map.of("message", "Toggled"));
     }
 
-    //채팅
+    // --- 채팅 & 로그 ---
+
     @GetMapping("/{taskId}/chats")
     public List<Map<String, Object>> getChats(@PathVariable Long taskId) {
         return taskService.getChats(taskId);
@@ -127,10 +147,8 @@ public class TaskController {
         return ResponseEntity.ok("Chat added");
     }
 
-    //로그
     @GetMapping("/{taskId}/logs")
     public List<Map<String, Object>> getLogs(@PathVariable Long taskId) {
         return taskService.getLogs(taskId);
     }
-
 }
