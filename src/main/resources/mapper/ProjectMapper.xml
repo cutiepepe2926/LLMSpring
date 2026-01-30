@@ -203,7 +203,9 @@
         WHERE pm.user_id = #{userId}
           AND p.status = 'DONE'
           AND p.deleted_at IS NULL
-        ORDER BY p.updated_at DESC
+          AND pm.deleted_at IS NULL
+          AND pm.status = 'ACTIVE'
+        ORDER BY p.project_id DESC
     </select>
 
     <select id="getDetailedTrashProjectList" resultType="com.example.LlmSpring.project.response.ProjectListResponseDTO">

@@ -42,6 +42,14 @@ public class ProjectMemberController {
 
             // 3. 서비스 호출 (추출된 userId 전달)
             List<ProjectMemberResponseDTO> members = projectMemberService.getMemberList(projectId, userId);
+
+            // 조회한 멤버 목록 중 '나(userId)'와 일치하는 멤버의 status를 "me"로 변경
+            for (ProjectMemberResponseDTO member : members) {
+                if (member.getUserId().equals(userId)) {
+                    member.setStatus("me");
+                }
+            }
+
             return ResponseEntity.ok(members);
 
         } catch (RuntimeException e) {
