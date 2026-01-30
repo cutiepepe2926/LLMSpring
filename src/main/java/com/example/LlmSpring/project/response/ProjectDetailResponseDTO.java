@@ -19,4 +19,5 @@ public class ProjectDetailResponseDTO {
     // 필요 시 깃허브 관련 추가 정보 포함
     private String githubDefaultBranch;
     private String githubConnectedStatus;
+    private LocalDateTime deletedAt; // 삭제 여부 및 삭제 예정일
 }
