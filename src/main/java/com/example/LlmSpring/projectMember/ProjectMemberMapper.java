@@ -39,6 +39,9 @@ public interface ProjectMemberMapper {
     // 5. 프로젝트의 사용자 status 확인
     String selectMemberStatus(@Param("projectId") int projectId, @Param("userId") String userId);
 
-    // 6-1.초대 수락
+    // 6-1. 초대 수락
     void updateMemberStatus(@Param("projectId") int projectId, @Param("userId") String userId, @Param("status") String status);
+
+    // 6-2. 초대 거절
+    void declineInvitation(@Param("projectId") int projectId, @Param("userId") String userId);
 }

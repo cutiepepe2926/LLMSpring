@@ -163,4 +163,29 @@ public class ProjectMemberController {
         }
     }
 
+    @PostMapping("/{projectId}/decline")
+    public ResponseEntity<?> declineInvitation(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable("projectId") int projectId
+    ) {
+        try {
+            String token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : authHeader;
+            String userId = jwtService.verifyTokenAndUserId(token);
+
+            if (userId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Collections.singletonMap("error", "유효하지 않거나 만료된 토큰입니다"));
+            }
+
+            projectMemberService.declineInvitation(projectId, userId);
+
+            // JSON 응답 반환
+            return ResponseEntity.ok(Collections.singletonMap("message", "프로젝트 초대를 거절했습니다."));
+
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest()
+                    .body(Collections.singletonMap("error", e.getMessage()));
+        }
+    }
+
 }

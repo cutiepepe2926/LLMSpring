@@ -42,4 +42,7 @@ public interface ProjectMemberService {
 
     // 5. 초대 수락
     void acceptInvitation(int projectId, String userId);
+
+    // 6. 초대 거절
+    void declineInvitation(int projectId, String userId);
 }
