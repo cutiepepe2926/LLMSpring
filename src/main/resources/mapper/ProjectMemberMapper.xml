@@ -87,4 +87,10 @@
           AND deleted_at IS NULL
     </update>
 
+    <select id="selectMemberStatus" resultType="string">
+        SELECT status
+        FROM projectmember
+        WHERE project_id = #{projectId} AND user_id = #{userId}
+    </select>
+
 </mapper>

@@ -19,4 +19,7 @@ public class ProjectDetailResponseDTO {
     // 필요 시 깃허브 관련 추가 정보 포함
     private String githubDefaultBranch;
     private String githubConnectedStatus;
+
+    // 접속하려는 프로젝트의 사용자 상태(ACTIVE, INVITED)
+    private String currentUserStatus;
 }
