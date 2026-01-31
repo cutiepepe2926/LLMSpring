@@ -173,6 +173,9 @@ public class ProjectServiceImpl implements ProjectService {
         return projectMapper.getDetailedTrashProjectList(userId);
     }
 
+    /**
+     * 사용자가 참여 중인 프로젝트 단일 상세 정보 조회 (TRASH)
+     */
     @Override
     public ProjectDetailResponseDTO getProjectDetail(int projectId, String userId) {
         // 1. 프로젝트 조회 (ProjectMapper.xml에 selectProjectById는 이미 존재함)
@@ -180,8 +183,8 @@ public class ProjectServiceImpl implements ProjectService {
         ProjectVO project = projectMapper.selectProjectById((long) projectId);
 
         // 2. 프로젝트 존재 및 삭제 여부 확인
-        if (project == null || project.getDeletedAt() != null) {
-            throw new RuntimeException("존재하지 않거나 삭제된 프로젝트입니다.");
+        if (project == null) {
+            throw new RuntimeException("존재하지 않는 프로젝트입니다.");
         }
 
         // 3. 권한 확인: 요청자가 해당 프로젝트의 활성 멤버인지 확인
@@ -202,6 +205,7 @@ public class ProjectServiceImpl implements ProjectService {
                 .dailyReportTime(project.getDailyReportTime())
                 .githubDefaultBranch(project.getGithubDefaultBranch())
                 .githubConnectedStatus(project.getGithubConnectedStatus())
+                .deletedAt(project.getDeletedAt())
                 .build();
     }
 

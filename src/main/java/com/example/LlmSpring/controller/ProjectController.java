@@ -7,7 +7,6 @@ import com.example.LlmSpring.project.request.ProjectUpdateRequestDTO;
 import com.example.LlmSpring.project.response.ProjectDetailResponseDTO;
 import com.example.LlmSpring.project.response.ProjectListResponseDTO;
 import com.example.LlmSpring.util.JWTService;
-import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

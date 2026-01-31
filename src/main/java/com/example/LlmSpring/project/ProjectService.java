@@ -34,4 +34,5 @@ public interface ProjectService {
 
     // 단일 프로젝트 상세 조회
     ProjectDetailResponseDTO getProjectDetail(int projectId, String userId);
+
 }

@@ -141,7 +141,7 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
             throw new RuntimeException("해당 프로젝트의 활성 멤버가 아닙니다.");
         }
 
-        // 2. 액션별 비즈니스 로직 분기
+        // 2. 액션별 분기
         switch (action) {
             case "추방":
                 validateExpulsion(requesterRole, targetMember);
