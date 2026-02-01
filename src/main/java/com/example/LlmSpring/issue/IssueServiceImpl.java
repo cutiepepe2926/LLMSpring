@@ -289,14 +289,17 @@ public class IssueServiceImpl implements IssueService {
      * 이슈 목록 조회 (필터링 및 정렬 파싱)
      */
     @Override
-    public List<IssueListResponseDTO> getIssueList(int projectId, String userId, String status, Integer priority, String assigneeId, String sort) {
+    public List<IssueListResponseDTO> getIssueList(int projectId, String userId, String status, Integer priority, String assigneeId,
+                                                   String createdStart, String createdEnd, String dueStart, String dueEnd, String sort) {
 
         if (projectMapper.getProjectRole(projectId, userId) == null) {
             throw new RuntimeException("프로젝트 멤버 권한이 없습니다.");
         }
 
         String[] sortParts = sort.split("_");
-        return issueMapper.selectIssueList(projectId, status, priority, assigneeId, sortParts[0], sortParts[1].toUpperCase());
+        return issueMapper.selectIssueList(projectId, status, priority, assigneeId,
+                createdStart, createdEnd, dueStart, dueEnd,
+                sortParts[0], sortParts[1].toUpperCase());
     }
 
 
@@ -336,6 +339,7 @@ public class IssueServiceImpl implements IssueService {
                 .priority(issue.getPriority())
                 .dueDate(issue.getDueDate())
                 .createdBy(issue.getCreatedBy())
+                .creatorName(issue.getCreatorName())
                 .createdAt(issue.getCreatedAt())
                 .finishedAt(issue.getFinishedAt())
                 .assignees(assignees)

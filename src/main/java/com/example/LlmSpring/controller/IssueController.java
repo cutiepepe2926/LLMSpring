@@ -165,9 +165,16 @@ public class IssueController {
                                   @RequestParam(required = false) String status,
                                   @RequestParam(required = false) Integer priority,
                                   @RequestParam(required = false) String assigneeId,
+                                  @RequestParam(required = false) String createdStart,
+                                  @RequestParam(required = false) String createdEnd,
+                                  @RequestParam(required = false) String dueStart,
+                                  @RequestParam(required = false) String dueEnd,
                                   @RequestParam(defaultValue = "createdAt_desc") String sort) {
         String uid = jwtService.verifyTokenAndUserId(auth.replace("Bearer ", ""));
-        return ResponseEntity.ok(issueService.getIssueList(projectId, uid, status, priority, assigneeId, sort));
+        return ResponseEntity.ok(issueService.getIssueList(
+                projectId, uid, status, priority, assigneeId,
+                createdStart, createdEnd, dueStart, dueEnd, sort
+        ));
     }
 
     /**
