@@ -172,9 +172,9 @@
             p.end_date AS endDate,
             pm.is_favorite AS favorite,
             -- 총 업무 수 집계
-            (SELECT COUNT(*) FROM Task t WHERE t.project_id = p.project_id) AS totalTaskCount,
+            (SELECT COUNT(*) FROM Task t WHERE t.project_id = p.project_id AND t.deleted_at IS NULL) AS totalTaskCount,
             -- 완료된 업무 수 집계 (status = 'DONE')
-            (SELECT COUNT(*) FROM Task t WHERE t.project_id = p.project_id AND t.status = 'DONE') AS completedTaskCount,
+            (SELECT COUNT(*) FROM Task t WHERE t.project_id = p.project_id AND t.status = 'DONE' AND t.deleted_at IS NULL) AS completedTaskCount,
             -- 완료되지 않은 이슈 수 집계 (status != 'DONE')
             (SELECT COUNT(*) FROM Issue i WHERE i.project_id = p.project_id AND i.status != 'DONE') AS openIssueCount,
             -- 참여 멤버 수 집계 (활성 상태 멤버 기준)
@@ -197,8 +197,8 @@
             p.start_date AS startDate,
             p.end_date AS endDate,
             pm.is_favorite AS favorite,
-            (SELECT COUNT(*) FROM Task t WHERE t.project_id = p.project_id) AS totalTaskCount,
-            (SELECT COUNT(*) FROM Task t WHERE t.project_id = p.project_id AND t.status = 'DONE') AS completedTaskCount,
+            (SELECT COUNT(*) FROM Task t WHERE t.project_id = p.project_id AND t.deleted_at IS NULL) AS totalTaskCount,
+            (SELECT COUNT(*) FROM Task t WHERE t.project_id = p.project_id AND t.status = 'DONE' AND t.deleted_at IS NULL) AS completedTaskCount,
             (SELECT COUNT(*) FROM Issue i WHERE i.project_id = p.project_id AND i.status != 'DONE') AS openIssueCount,
             (SELECT COUNT(*) FROM ProjectMember pm2 WHERE pm2.project_id = p.project_id AND pm2.status = 'ACTIVE') AS memberCount
         FROM Project p
@@ -219,8 +219,8 @@
             p.start_date AS startDate,
             p.end_date AS endDate,
             p.deleted_at AS deletedAt,
-            (SELECT COUNT(*) FROM Task t WHERE t.project_id = p.project_id) AS totalTaskCount,
-            (SELECT COUNT(*) FROM Task t WHERE t.project_id = p.project_id AND t.status = 'DONE') AS completedTaskCount,
+            (SELECT COUNT(*) FROM Task t WHERE t.project_id = p.project_id AND t.deleted_at IS NULL) AS totalTaskCount,
+            (SELECT COUNT(*) FROM Task t WHERE t.project_id = p.project_id AND t.status = 'DONE' AND t.deleted_at IS NULL) AS completedTaskCount,
             (SELECT COUNT(*) FROM Issue i WHERE i.project_id = p.project_id AND i.status != 'DONE') AS openIssueCount,
             (SELECT COUNT(*) FROM ProjectMember pm2 WHERE pm2.project_id = p.project_id AND pm2.status = 'ACTIVE') AS memberCount
         FROM Project p

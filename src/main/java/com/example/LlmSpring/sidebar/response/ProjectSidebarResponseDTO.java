@@ -2,6 +2,7 @@ package com.example.LlmSpring.sidebar.response;
 
 import lombok.Data;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -17,6 +18,8 @@ public class ProjectSidebarResponseDTO {
     public static class SidebarTaskDTO {
         private Long taskId;
         private String title;
+        private String status;
         private Integer priority;
+        private LocalDateTime dueDate;
     }
 }

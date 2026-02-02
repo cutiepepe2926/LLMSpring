@@ -35,15 +35,20 @@
         SELECT
             t.task_id AS taskId,
             t.title AS title,
-            t.priority AS priority
-        FROM Task t
-                 JOIN TaskUser tu ON t.task_id = tu.task_id
+            t.priority AS priority,
+            t.due_date AS dueDate,
+            t.status AS status        FROM Task t
+                                               LEFT JOIN TaskUser tu ON t.task_id = tu.task_id
         WHERE t.project_id = #{projectId}
-          AND tu.user_id = #{userId}
-          AND t.status != 'DONE'
           AND t.deleted_at IS NULL
+          AND t.status != 'DONE'
+          AND (
+             tu.user_id = #{userId}
+           OR t.user_id = #{userId}
+            )
+        GROUP BY t.task_id
         ORDER BY t.priority DESC, t.due_date ASC
-            LIMIT 5
+            LIMIT 100
     </select>
 
     <select id="existsFavorite" resultType="int">
