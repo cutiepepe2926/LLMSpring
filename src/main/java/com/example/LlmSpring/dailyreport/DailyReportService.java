@@ -7,6 +7,7 @@ import com.example.LlmSpring.user.UserMapper;
 import com.example.LlmSpring.user.UserVO;
 import com.example.LlmSpring.util.EncryptionUtil;
 import com.example.LlmSpring.util.S3Service;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
@@ -292,29 +293,48 @@ public class DailyReportService {
     private String generateAiSummary(List<Map<String, Object>> commitData) {
         String geminiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + geminiApiKey;
 
+        ObjectMapper objectMapper = new ObjectMapper();
+        String jsonCommitData;
+        try{
+            jsonCommitData = objectMapper.writeValueAsString(commitData);
+        }catch (Exception e){
+            jsonCommitData = commitData.toString();
+        }
+
+        // [프롬프트 수정됨]
         String prompt = """
-            당신은 팩트에 기반해 문서를 정리하는 테크니컬 라이터입니다.
-            제공된 커밋 로그(JSON)를 시간순으로 분석하여 개발 내역을 정리해주세요.
+            ## Role
+            당신은 소프트웨어 개발 프로젝트의 변경 사항을 문서화하는 전문 테크니컬 라이터입니다.
+            제공된 커밋 데이터(JSON)를 분석하여 팀 공유용 기술 리포트를 작성하십시오.
 
-            [작성 규칙]
-            1. **포맷**: Notion에 바로 붙여넣을 수 있는 깔끔한 Markdown 형식을 사용하세요.
-            2. **어조**: 이모티콘을 절대 사용하지 말고, 간결하고 전문적인 문체로 작성하세요.
-            3. **조건부 출력**: '추가된 내용', '수정된 내용', '삭제된 내용'으로 분류하되, **변경 사항이 없는 항목은 제목 자체를 아예 적지 말고 생략하세요.**
-            4. **기반 데이터**: 오직 제공된 로그와 패치 내역에 있는 사실만 적으세요.
-            
-            [출력 양식 예시]
-            ### 추가된 내용
-            - (새로운 기능, 파일 추가 등)
-            
-            ### 수정된 내용
-            - (기존 로직 변경 등)
-            
-            ---
-            ### 📝 작업 요약
-            - (전체 작업의 핵심 내용 3문장 이내)
+            ## Constraints
+            1. **Tone**: 본문은 건조하고 전문적인 문체를 사용하십시오. (해요체 금지, 하십시오체 또는 명사형 종결 사용)
+            2. **Format**: Notion과 호환되는 Markdown 형식을 엄수하십시오.
+            3. **Emoji**: **섹션 제목(Header)에는 가독성을 위해 이모티콘을 사용하십시오.** 단, 본문 텍스트에는 이모티콘을 사용하지 마십시오.
+            4. **Fact-based**: 제공된 데이터에 없는 내용을 추론하거나 꾸며내지 마십시오.
+            5. **Filtering**: 변경 사항이 미미하거나(단순 공백 수정 등) 의미 없는 커밋은 리포트에서 제외하십시오.
 
-            [커밋 데이터]
-            """ + commitData.toString();
+            ## Output Structure
+            리포트는 반드시 아래의 3가지 섹션으로 구성되어야 합니다.
+
+            ### 1. 📅 커밋 타임라인 (Graph)
+            - 시간순(과거->현재)으로 정렬된 텍스트 기반 그래프입니다.
+            - 포맷: `YYYY-MM-DD HH:mm` | `[Commit Hash 7자리]` | `커밋 메시지`
+
+            ### 2. 🛠️ 상세 변경 내역
+            각 유의미한 커밋에 대해 아래 항목으로 분류하여 기술하십시오. 해당 사항이 없는 항목은 생략하십시오.
+            **[Commit Hash 7자리] 커밋 메시지**
+            - **추가**: (새로운 기능, 파일, 메서드 등)
+            - **수정**: (로직 변경, 리팩토링, 버그 수정 등)
+            - **삭제**: (제거된 기능, 파일, 코드 등)
+
+            ### 3. 📝 작업 요약 (Executive Summary)
+            - 전체 커밋 내용을 종합하여 핵심 변경 사항을 3~5문장으로 요약하십시오.
+            - **반드시 "금일 작업 내용은..."이라는 문구로 문장을 시작하십시오.**
+            - 개발 팀장이 빠르게 내용을 파악할 수 있도록 비즈니스 로직이나 아키텍처 변경 위주로 서술하십시오.
+
+            ## Input Data (JSON)
+            """ + jsonCommitData;
 
         // Gemini 요청 바디 구성
         Map<String, Object> requestBody = new HashMap<>();
@@ -323,7 +343,13 @@ public class DailyReportService {
 
         parts.put("text", prompt);
         content.put("parts", Collections.singletonList(parts));
+
+        Map<String, Object> generationConfig = new HashMap<>();
+        generationConfig.put("temperature", 0.2);
+
+        // [주의] contents(복수형) 및 generationConfig 철자 확인 필수
         requestBody.put("contents", Collections.singletonList(content));
+        requestBody.put("generationConfig", generationConfig);
 
         RestTemplate restTemplate = new RestTemplate();
         HttpHeaders headers = new HttpHeaders();
