@@ -70,6 +70,11 @@ public class FinalReportServiceImpl implements FinalReportService {
         return generatedContent;
     }
 
+    @Override
+    public FinalReportVO getFinalReportMetadata(Long projectId) {
+        return finalReportMapper.selectFinalReportByProjectId(projectId);
+    }
+
     private String fetchContentFromS3(String url) {
         if (url == null || !url.startsWith("http")) {
             return url; // URL이 아니면 그대로 반환 (하위 호환성)

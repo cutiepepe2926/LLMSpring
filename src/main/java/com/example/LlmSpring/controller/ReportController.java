@@ -3,6 +3,7 @@ package com.example.LlmSpring.controller;
 import com.example.LlmSpring.report.dailyreport.DailyReportService;
 import com.example.LlmSpring.report.dailyreport.response.DailyReportResponseDTO;
 import com.example.LlmSpring.report.finalreport.FinalReportService;
+import com.example.LlmSpring.report.finalreport.FinalReportVO;
 import com.example.LlmSpring.util.JWTService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -132,5 +133,19 @@ public class ReportController {
         response.put("content", finalReportContent);
 
         return ResponseEntity.ok(response);
+    }
+
+    // 14. 최종 리포트 메타데이터 조회
+    @GetMapping("/final-reports")
+    public ResponseEntity<FinalReportVO> getFinalReportMetadata(@PathVariable Long projectId) {
+        FinalReportVO report = finalReportService.getFinalReportMetadata(projectId);
+
+        if (report == null) {
+            // 리포트가 없으면 204 No Content 반환 (프론트에서 생성 화면 보여줌)
+            return ResponseEntity.noContent().build();
+        }
+
+        // 리포트가 있으면 200 OK와 함께 정보 반환
+        return ResponseEntity.ok(report);
     }
 }
