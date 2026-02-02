@@ -166,14 +166,11 @@ public class DailyReportService {
 
         String owner = parts[parts.length - 2];
         String repo = parts[parts.length - 1];
-        // 1. 현재 한국 시간 가져오기
-        ZonedDateTime nowKST = ZonedDateTime.now(ZoneId.of("Asia/Seoul"));
-        // 2. 24시간 전으로 설정
-        ZonedDateTime sinceKST = nowKST.minusHours(24);
-        // 3. GitHub API 표준인 UTC로 변환 (포맷 예: 2026-01-27T03:44:00Z)
-        String since = sinceKST.withZoneSameInstant(ZoneId.of("UTC")).format(DateTimeFormatter.ISO_INSTANT);
 
-        log.info("GitHub 검색 기준 시간(since): {}", since);
+        // 날짜 기준 설정 (기존 동일)
+        ZonedDateTime nowKST = ZonedDateTime.now(ZoneId.of("Asia/Seoul"));
+        ZonedDateTime sinceKST = nowKST.minusHours(24);
+        String since = sinceKST.withZoneSameInstant(ZoneId.of("UTC")).format(DateTimeFormatter.ISO_INSTANT);
 
         RestTemplate restTemplate = new RestTemplate();
         HttpHeaders headers = new HttpHeaders();
@@ -181,7 +178,7 @@ public class DailyReportService {
         headers.set("Accept", "application/vnd.github.v3+json");
         HttpEntity<String> entity = new HttpEntity<>(headers);
 
-        // 1. 모든 브랜치 가져오기
+        // 1. 모든 브랜치 가져오기 (기존 동일)
         List<String> branches = new ArrayList<>();
         try {
             String branchesUrl = String.format("https://api.github.com/repos/%s/%s/branches", owner, repo);
@@ -193,18 +190,17 @@ public class DailyReportService {
                 }
             }
         } catch (Exception e) {
-            log.error("브랜치 목록 조회 실패: " + e.getMessage());
-            // 브랜치 조회 실패 시 기본 main이라도 시도하도록 리스트에 추가
+            log.error("브랜치 목록 조회 실패", e);
             branches.add("main");
         }
 
-        // 2. 브랜치별 커밋 조회 (병렬 처리 권장되나, 간단히 순차 처리 후 상세 조회만 병렬로 함)
-        // 중복 제거를 위해 Map<SHA, CommitData> 사용
+        // 2. 브랜치별 커밋 조회 및 "브랜치 정보 매핑"
         Map<String, Map<String, Object>> uniqueCommitsMap = new HashMap<>();
+        // SHA를 Key로 하고, 해당 SHA가 속한 브랜치 이름들을 Set으로 저장
+        Map<String, Set<String>> shaToBranches = new HashMap<>();
 
         for (String branch : branches) {
             try {
-                // 해당 브랜치에서, 내가 작성한, 24시간 이내 커밋
                 String commitsUrl = String.format(
                         "https://api.github.com/repos/%s/%s/commits?per_page=10&sha=%s&author=%s&since=%s",
                         owner, repo, branch, githubId, since
@@ -216,12 +212,14 @@ public class DailyReportService {
                 if (branchCommits != null) {
                     for (Map<String, Object> commit : branchCommits) {
                         String sha = (String) commit.get("sha");
-                        uniqueCommitsMap.putIfAbsent(sha, commit); // 이미 있으면 스킵 (중복 방지)
+                        uniqueCommitsMap.putIfAbsent(sha, commit); // API 호출용 유니크 맵
+
+                        // 해당 SHA가 발견된 브랜치 이름을 Set에 추가
+                        shaToBranches.computeIfAbsent(sha, k -> new HashSet<>()).add(branch);
                     }
                 }
             } catch (Exception e) {
                 log.warn("브랜치 커밋 조회 실패 (" + branch + "): " + e.getMessage());
-                // 특정 브랜치 조회 실패해도 다른 브랜치는 계속 진행
             }
         }
 
@@ -229,34 +227,35 @@ public class DailyReportService {
             return Collections.emptyList();
         }
 
-        // 3. 유니크한 커밋들의 상세 정보(Patch) 병렬 조회
+        // 3. 상세 정보 조회 및 브랜치 정보 주입
         List<CompletableFuture<Map<String, Object>>> futures = uniqueCommitsMap.values().stream()
                 .map(commitItem -> CompletableFuture.supplyAsync(() -> {
                     String sha = (String) commitItem.get("sha");
                     String detailUrl = String.format("https://api.github.com/repos/%s/%s/commits/%s", owner, repo, sha);
                     try {
-                        return (Map<String, Object>) restTemplate.exchange(detailUrl, HttpMethod.GET, entity, Map.class).getBody();
+                        Map<String, Object> detail = (Map<String, Object>) restTemplate.exchange(detailUrl, HttpMethod.GET, entity, Map.class).getBody();
+
+                        // 상세 정보 Map에 'branches' 리스트 추가
+                        if (detail != null) {
+                            detail.put("related_branches", new ArrayList<>(shaToBranches.getOrDefault(sha, Collections.emptySet())));
+                        }
+                        return detail;
                     } catch (Exception e) {
                         return null;
                     }
                 }, executorService).thenApply(this::filterForAI))
                 .collect(Collectors.toList());
 
-        // 시간순 정렬 (GitHub API는 최신순으로 주지만, 병렬 처리 후 뒤섞일 수 있으므로 재정렬)
-        List<Map<String, Object>> result = futures.stream()
+        // 시간순 정렬
+        return futures.stream()
                 .map(CompletableFuture::join)
                 .filter(Objects::nonNull)
                 .sorted((c1, c2) -> {
-                    // date 문자열 비교 (ISO 포맷이라 문자열 비교 가능)
                     String d1 = (String) c1.get("date");
                     String d2 = (String) c2.get("date");
-                    return d1.compareTo(d2); // 과거 -> 최신 (리포트 작성 순서)
+                    return d1.compareTo(d2);
                 })
                 .collect(Collectors.toList());
-
-        System.out.println(result);
-
-        return result;
     }
 
     // 1.3 AI 분석을 위해 필요한 정보만 필터
@@ -269,6 +268,7 @@ public class DailyReportService {
 
         filtered.put("date", authorInfo.get("date"));
         filtered.put("message", commitInfo.get("message"));
+        filtered.put("branches", original.get("related_branches"));
 
         List<Map<String, Object>> files = (List<Map<String, Object>>) original.get("files");
         List<Map<String, String>> fileChanges = new ArrayList<>();
@@ -278,7 +278,6 @@ public class DailyReportService {
                 Map<String, String> fileData = new HashMap<>();
                 fileData.put("filename", (String) file.get("filename"));
                 fileData.put("status", (String) file.get("status"));
-                // Patch는 너무 길면 자르는 로직 추가 고려 가능
                 String patch = (String) file.get("patch");
                 fileData.put("patch", patch != null ? patch : "(Binary or Large file)");
                 fileChanges.add(fileData);
@@ -290,7 +289,7 @@ public class DailyReportService {
 
     // 1.4 GEMINI API 호출
     private String generateAiSummary(List<Map<String, Object>> commitData) {
-        String geminiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + geminiApiKey;
+        String geminiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=" + geminiApiKey;
 
         ObjectMapper objectMapper = new ObjectMapper();
         String jsonCommitData;
@@ -305,32 +304,32 @@ public class DailyReportService {
             ## Role
             당신은 소프트웨어 개발 프로젝트의 변경 사항을 문서화하는 전문 테크니컬 라이터입니다.
             제공된 커밋 데이터(JSON)를 분석하여 팀 공유용 기술 리포트를 작성하십시오.
+            JSON 데이터에는 각 커밋이 속한 브랜치 정보("branches")가 포함되어 있습니다.
 
             ## Constraints
             1. **Tone**: 본문은 건조하고 전문적인 문체를 사용하십시오. (해요체 금지, 하십시오체 또는 명사형 종결 사용)
             2. **Format**: Notion과 호환되는 Markdown 형식을 엄수하십시오.
-            3. **Emoji**: **섹션 제목(Header)에는 가독성을 위해 이모티콘을 사용하십시오.** 단, 본문 텍스트에는 이모티콘을 사용하지 마십시오.
+            3. **Grouping**: **반드시 '브랜치(Branch)'를 기준으로 커밋 내용을 그룹화하여 작성하십시오.**
             4. **Fact-based**: 제공된 데이터에 없는 내용을 추론하거나 꾸며내지 마십시오.
-            5. **Filtering**: 변경 사항이 미미하거나(단순 공백 수정 등) 의미 없는 커밋은 리포트에서 제외하십시오.
 
             ## Output Structure
-            리포트는 반드시 아래의 3가지 섹션으로 구성되어야 합니다.
+            리포트는 반드시 아래의 구조를 따라야 합니다.
 
-            ### 1. 📅 커밋 타임라인 (Graph)
-            - 시간순(과거->현재)으로 정렬된 텍스트 기반 그래프입니다.
-            - 포맷: `YYYY-MM-DD HH:mm` | `[Commit Hash 7자리]` | `커밋 메시지`
+            ### 1. 📅 커밋 타임라인
+            - 전체 커밋을 시간순으로 나열한 요약 그래프입니다.
+            - 포맷: `YYYY-MM-DD HH:mm` | `[BranchName]` | `커밋 메시지`
 
-            ### 2. 🛠️ 상세 변경 내역
-            각 유의미한 커밋에 대해 아래 항목으로 분류하여 기술하십시오. 해당 사항이 없는 항목은 생략하십시오.
+            ### 2. 🌿 브랜치별 상세 작업 내역
+            작업된 브랜치 별로 섹션을 나누어 상세 내용을 기술하십시오.
+            
+            #### 📂 [브랜치 이름] (예: feature/login)
             **[Commit Hash 7자리] 커밋 메시지**
-            - **추가**: (새로운 기능, 파일, 메서드 등)
-            - **수정**: (로직 변경, 리팩토링, 버그 수정 등)
-            - **삭제**: (제거된 기능, 파일, 코드 등)
+             - **변경 사항**: (코드의 핵심 변경 내용 요약)
+             - **상세**: (추가/수정/삭제된 파일 및 로직 설명)
 
-            ### 3. 📝 작업 요약 (Executive Summary)
-            - 전체 커밋 내용을 종합하여 핵심 변경 사항을 3~5문장으로 요약하십시오.
-            - **반드시 "금일 작업 내용은..."이라는 문구로 문장을 시작하십시오.**
-            - 개발 팀장이 빠르게 내용을 파악할 수 있도록 비즈니스 로직이나 아키텍처 변경 위주로 서술하십시오.
+            ### 3. 📝 금일 작업 요약 (Executive Summary)
+            - 전체 브랜치의 작업을 통합하여 비즈니스 관점에서 3~5문장으로 요약하십시오.
+            - **반드시 "금일 작업 내용은..."으로 시작하십시오.**
 
             ## Input Data (JSON)
             """ + jsonCommitData;
@@ -346,7 +345,6 @@ public class DailyReportService {
         Map<String, Object> generationConfig = new HashMap<>();
         generationConfig.put("temperature", 0.2);
 
-        // [주의] contents(복수형) 및 generationConfig 철자 확인 필수
         requestBody.put("contents", Collections.singletonList(content));
         requestBody.put("generationConfig", generationConfig);
 
