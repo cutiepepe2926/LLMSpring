@@ -1,13 +1,15 @@
 package com.example.LlmSpring.controller;
 
-import com.example.LlmSpring.dailyreport.DailyReportService;
-import com.example.LlmSpring.dailyreport.response.DailyReportResponseDTO;
+import com.example.LlmSpring.report.dailyreport.DailyReportService;
+import com.example.LlmSpring.report.dailyreport.response.DailyReportResponseDTO;
+import com.example.LlmSpring.report.finalreport.FinalReportService;
 import com.example.LlmSpring.util.JWTService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -18,6 +20,7 @@ import java.util.Map;
 public class ReportController {
 
     private final DailyReportService dailyReportService;
+    private final FinalReportService finalReportService;
     private final JWTService jwtService;
 
     private String getUserId(String authHeader) {
@@ -103,4 +106,31 @@ public class ReportController {
         dailyReportService.updateReportSettings(projectId, body);
     }
 
+    // 13. 최종 리포트 생성
+    @PostMapping("/final-reports")
+    public ResponseEntity<Map<String, String>> createFinalReport(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable Long projectId,
+            @RequestBody Map<String, String> body) {
+
+        // 1. 토큰에서 User ID 추출
+        String token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : authHeader;
+        String userId = jwtService.verifyTokenAndUserId(token);
+
+        if (userId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        // 2. 리포트 타입 추출
+        String reportType = body.get("reportType");
+
+        // 3. 서비스 호출 (조회 or 생성)
+        String finalReportContent = finalReportService.getOrCreateFinalReport(projectId, reportType, userId);
+
+        // 4. 응답 반환
+        Map<String, String> response = new HashMap<>();
+        response.put("content", finalReportContent);
+
+        return ResponseEntity.ok(response);
+    }
 }

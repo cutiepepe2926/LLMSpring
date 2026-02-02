@@ -1,6 +1,6 @@
-package com.example.LlmSpring.dailyreport;
+package com.example.LlmSpring.report.dailyreport;
 
-import com.example.LlmSpring.dailyreport.response.DailyReportResponseDTO;
+import com.example.LlmSpring.report.dailyreport.response.DailyReportResponseDTO;
 import com.example.LlmSpring.project.ProjectMapper;
 import com.example.LlmSpring.project.ProjectVO;
 import com.example.LlmSpring.user.UserMapper;
@@ -17,7 +17,6 @@ import org.springframework.web.client.RestTemplate;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
