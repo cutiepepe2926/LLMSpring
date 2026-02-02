@@ -204,5 +204,26 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
         }
     }
 
+    // ACTIVE 상태의 프로젝트 멤버 목록 반환
+    @Override
+    public List<ProjectMemberResponseDTO> getIssueAssigneeMemberList(int projectId, String userId) {
+        // 1. 요청자가 프로젝트의 활동 중인(ACTIVE) 멤버인지 확인
+        if (!projectMemberMapper.existsActiveMember(projectId, userId)) {
+            throw new RuntimeException("프로젝트 멤버만 조회할 수 있습니다.");
+        }
+
+        // 2. ACTIVE 상태인 멤버만 조회하는 전용 매퍼 호출
+        List<ProjectMemberResponseDTO> members = projectMemberMapper.selectActiveMembersByProjectId(projectId);
+
+        // 3. 본인(me) 표시 로직 (UI 편의성 위함)
+        for (ProjectMemberResponseDTO member : members) {
+            if (member.getUserId().equals(userId)) {
+                member.setStatus("me"); // ACTIVE 상태를 덮어쓰지만, 어차피 목록엔 ACTIVE만 있으므로 식별용으로 사용
+            }
+        }
+
+        return members;
+    }
+
 
 }

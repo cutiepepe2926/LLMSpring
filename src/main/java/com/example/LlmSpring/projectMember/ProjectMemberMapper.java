@@ -35,4 +35,7 @@ public interface ProjectMemberMapper {
 
     // 4-3. 프로젝트 멤버에 대한 소프트 델리트 실행 (deleted_at 업데이트)
     int deleteMember(@Param("projectId") int projectId, @Param("userId") String userId, @Param("deletedAt") LocalDateTime deletedAt);
+
+    // 이슈 담당자용: ACTIVE 멤버만 조회
+    List<ProjectMemberResponseDTO> selectActiveMembersByProjectId(@Param("projectId") int projectId);
 }

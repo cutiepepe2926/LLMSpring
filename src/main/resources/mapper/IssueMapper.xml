@@ -96,8 +96,9 @@
         <result property="dueDate" column="due_date"/>
         <result property="createdBy" column="created_by"/>
         <result property="createdAt" column="created_at"/>
-        <collection property="assignees" ofType="string" javaType="list">
-            <result column="assignee_user_id"/>
+        <collection property="assignees" ofType="com.example.LlmSpring.issue.response.IssueListResponseDTO$SimpleAssignee">
+            <result property="userId" column="assignee_id"/>
+            <result property="userName" column="assignee_name"/>
         </collection>
     </resultMap>
 
@@ -110,9 +111,9 @@
         i.due_date,
         i.created_by,
         i.created_at,
-        ia.user_id AS assignee_user_id
-        FROM Issue i
+        u.user_id AS assignee_id,   u.name    AS assignee_name  FROM Issue i
         LEFT JOIN Issue_Assignee ia ON i.issue_id = ia.issue_id
+        LEFT JOIN User u ON ia.user_id = u.user_id
         <where>
             i.project_id = #{projectId}
             AND i.archived_at IS NULL
@@ -129,21 +130,18 @@
                 WHERE sub_ia.issue_id = i.issue_id AND sub_ia.user_id = #{assigneeId}
                 )
             </if>
-
             <if test="createdStart != null and createdStart != ''">
                 AND i.created_at >= #{createdStart}
             </if>
             <if test="createdEnd != null and createdEnd != ''">
                 AND i.created_at &lt;= CONCAT(#{createdEnd}, ' 23:59:59')
             </if>
-
             <if test="dueStart != null and dueStart != ''">
                 AND i.due_date >= #{dueStart}
             </if>
             <if test="dueEnd != null and dueEnd != ''">
                 AND i.due_date &lt;= CONCAT(#{dueEnd}, ' 23:59:59')
             </if>
-
         </where>
         ORDER BY
         <choose>
