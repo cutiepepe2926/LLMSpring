@@ -69,17 +69,17 @@ public class FinalReportServiceImpl implements FinalReportService {
     }
 
     @Override
-    public FinalReportVO getFinalReportMetadata(Long projectId) {
-        // 1. DB에서 리포트 정보 조회 (이때 content는 S3 URL임)
-        FinalReportVO report = finalReportMapper.selectFinalReportByProjectId(projectId);
+    public List<FinalReportVO> getMyFinalReports(Long projectId, String userId) {
+        // 1. DB에서 리스트 조회 (이때 content 필드에는 https://s3... URL이 들어있음)
+        List<FinalReportVO> reports = finalReportMapper.selectAllFinalReportsByProjectAndUser(projectId, userId);
 
-        // 2. 리포트가 존재하면 S3 URL을 실제 텍스트로 변환
-        if (report != null) {
+        // 2. [수정] S3 URL을 실제 텍스트 내용으로 변환 (병렬 처리로 속도 최적화)
+        reports.parallelStream().forEach(report -> {
             String textContent = fetchContentFromS3(report.getContent());
-            report.setContent(textContent);
-        }
+            report.setContent(textContent); // URL을 실제 마크다운 내용으로 덮어씌움
+        });
 
-        return report;
+        return reports;
     }
 
     private String fetchContentFromS3(String url) {

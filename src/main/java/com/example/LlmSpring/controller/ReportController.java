@@ -142,15 +142,18 @@ public class ReportController {
 
     // 14. 최종 리포트 메타데이터 조회
     @GetMapping("/final-reports")
-    public ResponseEntity<FinalReportVO> getFinalReportMetadata(@PathVariable Long projectId) {
-        FinalReportVO report = finalReportService.getFinalReportMetadata(projectId);
+    public ResponseEntity<List<FinalReportVO>> getMyFinalReports(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable Long projectId) {
 
-        if (report == null) {
-            // 리포트가 없으면 204 No Content 반환 (프론트에서 생성 화면 보여줌)
-            return ResponseEntity.noContent().build();
-        }
+        // 1. 토큰에서 User ID 추출
+        String token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : authHeader;
+        String userId = jwtService.verifyTokenAndUserId(token);
+        if (userId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 
-        // 리포트가 있으면 200 OK와 함께 정보 반환
-        return ResponseEntity.ok(report);
+        // 2. 서비스 호출 (List 반환)
+        List<FinalReportVO> reports = finalReportService.getMyFinalReports(projectId, userId);
+
+        return ResponseEntity.ok(reports);
     }
 }

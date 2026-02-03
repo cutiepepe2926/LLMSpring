@@ -10,11 +10,11 @@
         ORDER BY report_date ASC
     </select>
 
-    <select id="selectFinalReportByProjectId" resultType="com.example.LlmSpring.report.finalreport.FinalReportVO">
+    <select id="selectAllFinalReportsByProjectAndUser" resultType="com.example.LlmSpring.report.finalreport.FinalReportVO">
         SELECT *
         FROM FinalReport
         WHERE project_id = #{projectId}
-            LIMIT 1
+          AND created_by = #{userId}  ORDER BY created_at DESC
     </select>
 
     <insert id="insertFinalReport" parameterType="com.example.LlmSpring.report.finalreport.FinalReportVO" useGeneratedKeys="true" keyProperty="finalReportId">

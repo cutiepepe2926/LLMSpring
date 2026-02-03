@@ -8,6 +8,6 @@ import java.util.List;
 @Mapper
 public interface FinalReportMapper {
     List<DailyReportVO> selectAllReportsByProjectId(Long projectId);
-    FinalReportVO selectFinalReportByProjectId(Long projectId);
+    List<FinalReportVO> selectAllFinalReportsByProjectAndUser(Long projectId, String userId);
     void insertFinalReport(FinalReportVO finalReportVO);
 }
