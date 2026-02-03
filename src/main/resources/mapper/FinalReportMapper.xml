@@ -10,12 +10,17 @@
         ORDER BY report_date ASC
     </select>
 
+    <select id="selectFinalReportById" resultType="com.example.LlmSpring.report.finalreport.FinalReportVO">
+        SELECT * FROM final_report WHERE final_report_id = #{finalReportId}
+    </select>
+
     <select id="selectAllFinalReportsByProjectAndUser" resultType="com.example.LlmSpring.report.finalreport.FinalReportVO">
         SELECT *
         FROM FinalReport
         WHERE project_id = #{projectId}
           AND created_by = #{userId}  ORDER BY created_at DESC
     </select>
+
 
     <insert id="insertFinalReport" parameterType="com.example.LlmSpring.report.finalreport.FinalReportVO" useGeneratedKeys="true" keyProperty="finalReportId">
         INSERT INTO FinalReport (
@@ -24,5 +29,12 @@
             #{projectId}, #{title}, #{content}, #{status}, #{createdBy}, NOW(), NOW()
         )
     </insert>
+
+    <update id="updateFinalReport">
+        UPDATE finalreport
+        SET title = #{title},
+            content = #{content},
+            created_at = NOW() WHERE final_report_id = #{finalReportId}
+    </update>
 
 </mapper>

@@ -82,6 +82,32 @@ public class FinalReportServiceImpl implements FinalReportService {
         return reports;
     }
 
+    @Override
+    @Transactional
+    public void updateFinalReport(Long finalReportId, String userId, String title, String content) {
+        FinalReportVO report = finalReportMapper.selectFinalReportByProjectId(finalReportId);
+        if(report == null){
+            throw new IllegalArgumentException("존재하지 않는 리포트입니다.");
+        }
+
+        if(!report.getCreatedBy().equals(userId)){
+            throw new IllegalArgumentException("수정 권한이 없습니다");
+        }
+
+        // s3에 내용 재업로드
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+        String s3FileName = String.format("finalReport/FinalReport_P%d_U%s_%s_upd.md",
+                report.getProjectId(), userId, timestamp);
+
+        String newS3Url = s3Service.uploadTextContent(s3FileName, content);
+
+        // DB 정보 업데이트
+        report.setTitle(title);
+        report.setContent(newS3Url); // 새 S3 URL로 교체
+
+        finalReportMapper.updateFinalReport(report);
+    }
+
     private String fetchContentFromS3(String url) {
         if (url == null || !url.startsWith("http")) {
             return url;
