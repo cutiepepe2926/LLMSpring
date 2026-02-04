@@ -10,8 +10,8 @@
         ORDER BY report_date ASC
     </select>
 
-    <select id="selectFinalReportById" resultType="com.example.LlmSpring.report.finalreport.FinalReportVO">
-        SELECT * FROM final_report WHERE final_report_id = #{finalReportId}
+    <select id="selectFinalReportByProjectId" resultType="com.example.LlmSpring.report.finalreport.FinalReportVO">
+        SELECT * FROM FinalReport WHERE final_report_id = #{finalReportId}
     </select>
 
     <select id="selectAllFinalReportsByProjectAndUser" resultType="com.example.LlmSpring.report.finalreport.FinalReportVO">

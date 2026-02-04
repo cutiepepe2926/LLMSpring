@@ -85,27 +85,36 @@ public class FinalReportServiceImpl implements FinalReportService {
     @Override
     @Transactional
     public void updateFinalReport(Long finalReportId, String userId, String title, String content) {
+        // 1. 기존 리포트 조회
         FinalReportVO report = finalReportMapper.selectFinalReportByProjectId(finalReportId);
-        if(report == null){
+        if (report == null) {
             throw new IllegalArgumentException("존재하지 않는 리포트입니다.");
         }
 
-        if(!report.getCreatedBy().equals(userId)){
-            throw new IllegalArgumentException("수정 권한이 없습니다");
+        // 2. 권한 확인
+        if (!report.getCreatedBy().equals(userId)) {
+            throw new IllegalArgumentException("수정 권한이 없습니다.");
         }
 
-        // s3에 내용 재업로드
+        // [중요] 삭제를 위해 기존 URL 미리 저장
+        String oldS3Url = report.getContent();
+
+        // 3. S3에 내용 재업로드 (새로운 타임스탬프로 생성)
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
         String s3FileName = String.format("finalReport/FinalReport_P%d_U%s_%s_upd.md",
                 report.getProjectId(), userId, timestamp);
 
         String newS3Url = s3Service.uploadTextContent(s3FileName, content);
 
-        // DB 정보 업데이트
+        // 4. DB 정보 업데이트
         report.setTitle(title);
-        report.setContent(newS3Url); // 새 S3 URL로 교체
+        report.setContent(newS3Url);
 
         finalReportMapper.updateFinalReport(report);
+
+        // [추가] 5. 기존 S3 파일 삭제 (DB 업데이트 성공 후 실행)
+        // 만약 '버전 관리' 기능이 필요 없다면 지우는 것이 맞습니다.
+        s3Service.deleteFile(oldS3Url);
     }
 
     private String fetchContentFromS3(String url) {
