@@ -6,10 +6,29 @@
 
     <insert id="insertIssue" useGeneratedKeys="true" keyProperty="issueId">
         INSERT INTO Issue (
-            project_id, title, description, status, priority, due_date, created_by
-        ) VALUES (
-                     #{projectId}, #{title}, #{description}, #{status}, #{priority}, #{dueDate}, #{createdBy}
-                 )
+            project_id,
+            title,
+            description,
+            status,
+            priority,
+            due_date,
+            created_by,
+            linked_commit_sha,
+            linked_commit_message,
+            linked_commit_url
+        )
+        VALUES (
+             #{projectId},
+             #{title},
+             #{description},
+             #{status},
+             #{priority},
+             #{dueDate},
+             #{createdBy},
+             #{linkedCommitSha},
+             #{linkedCommitMessage},
+             #{linkedCommitUrl}
+        )
     </insert>
 
     <insert id="insertIssueAssignees">

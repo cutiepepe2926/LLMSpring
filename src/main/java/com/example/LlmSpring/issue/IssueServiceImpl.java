@@ -30,26 +30,45 @@ public class IssueServiceImpl implements IssueService {
     @Transactional(rollbackFor = Exception.class)
     public int createIssue(int projectId, String userId, IssueCreateRequestDTO dto) {
 
+        System.out.println(">>> [Service] 이슈 생성 시작");
+        System.out.println(">>> 넘어온 ProjectID: " + projectId);
+        System.out.println(">>> 넘어온 UserID: " + userId); // 이 값이 null이거나 이상한 값이 아닌지 확인
+
         // 1. 권한 확인: 프로젝트 멤버인지 확인
         String role = projectMapper.getProjectRole(projectId, userId);
+
+        System.out.println(">>> [Step 1] DB에서 조회한 Role: " + role);
+
         if (role == null) {
+            System.out.println(">>> [Step 1] 실패: Role이 null입니다. (멤버 아님)");
             throw new RuntimeException("프로젝트 멤버만 이슈를 생성할 수 있습니다.");
         }
 
         // 2. 담당자 유효성 검증 (프로젝트 멤버이면서, ACTIVE 상태이면서, deleted_at이 null인 경우만 허용)
         List<String> assigneeIds = dto.getAssigneeIds();
         if (assigneeIds != null && !assigneeIds.isEmpty()) {
+
+            System.out.println(">>> [Step 2] 요청된 담당자 목록: " + assigneeIds);
+
             // DB에서 해당 프로젝트의 ACTIVE 멤버 중 assigneeIds에 포함된 인원 수를 카운트
             int activeMemberCount = projectMapper.countActiveProjectMembers(projectId, assigneeIds);
 
+            System.out.println(">>> [Step 2] DB Active 멤버 수: " + activeMemberCount);
+
             // 요청한 담당자 수와 DB에서 조회된 유효 멤버 수가 다르면 예외 발생
             if (activeMemberCount != assigneeIds.size()) {
+                System.out.println(">>> [Step 2] 실패: 요청 수(" + assigneeIds.size() + ") != DB 수(" + activeMemberCount + ")");
                 throw new RuntimeException("일부 담당자가 유효하지 않거나, 프로젝트에 참여 중(ACTIVE)인 멤버가 아닙니다.");
             }
         }
 
         // 3. 우선순위 검증 (0~5)
+
+        System.out.println(">>> [Step 3] 우선순위 출력확인: " + dto.getPriority());
+
         if (dto.getPriority() < 0 || dto.getPriority() > 5) {
+            System.out.println(">>> [Step 3] 우선순위 문제 발생");
+
             throw new RuntimeException("우선순위는 0에서 5 사이여야 합니다.");
         }
 
@@ -67,6 +86,9 @@ public class IssueServiceImpl implements IssueService {
                 .priority(dto.getPriority())
                 .dueDate(dto.getDueDate())
                 .createdBy(userId)
+                .linkedCommitSha(dto.getLinkedCommitSha())
+                .linkedCommitMessage(dto.getLinkedCommitMessage())
+                .linkedCommitUrl(dto.getLinkedCommitUrl())
                 .build();
 
         issueMapper.insertIssue(issue);
@@ -97,6 +119,8 @@ public class IssueServiceImpl implements IssueService {
                 );
             }
         }
+
+        System.out.println(">>> [Service] 멤버 확인 완료: ");
 
         return issueId;
     }
