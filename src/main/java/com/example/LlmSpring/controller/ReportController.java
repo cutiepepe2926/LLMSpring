@@ -196,8 +196,20 @@ public class ReportController {
         Object contentObj = body.get("content");
         String content = contentObj != null ? contentObj.toString() : "";
 
-        Map<String, Object> response = finalReportService.createFinalReportManual(projectId, userId, title, content);
+        try {
+            // 서비스 호출
+            Map<String, Object> response = finalReportService.createFinalReportManual(projectId, userId, title, content);
+            return ResponseEntity.ok(response);
 
-        return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            // [중요] 7개 제한에 걸렸을 때 400 Bad Request와 메시지 반환
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "저장 중 오류가 발생했습니다."));
+        }
     }
 }

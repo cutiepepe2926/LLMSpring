@@ -29,9 +29,14 @@ public class FinalReportServiceImpl implements FinalReportService {
     @Value("${gemini.api.key}")
     private String geminiApiKey;
 
+    // 최대 리포트 개수 제한
+    private static final int MAX_REPORT_COUNT = 7;
+
     @Override
     @Transactional
     public String getOrCreateFinalReport(Long projectId, String reportType, List<String> selectedSections, String userId) {
+        checkReportLimit(projectId, userId);
+
         // 1. 데이터 수집 (일일 리포트 모음)
         String aggregatedContent = collectAllDailyReports(projectId);
 
@@ -120,6 +125,8 @@ public class FinalReportServiceImpl implements FinalReportService {
     @Override
     @Transactional
     public Map<String, Object> createFinalReportManual(Long projectId, String userId, String title, String content) {
+        checkReportLimit(projectId, userId);
+
         // 1. S3 파일명 생성 (중복 방지 타임스탬프)
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
         // 파일명에 '_manual'을 붙여서 AI 생성본과 구분
@@ -146,6 +153,13 @@ public class FinalReportServiceImpl implements FinalReportService {
         result.put("content", content);
 
         return result;
+    }
+
+    private void checkReportLimit(Long projectId, String userId) {
+        int myReportsCount = finalReportMapper.countFinalReportByProjectIdAndUserId(projectId, userId);
+        if (myReportsCount >= MAX_REPORT_COUNT) {
+            throw new IllegalArgumentException("최종 리포트는 1인당 최대 " + MAX_REPORT_COUNT + "개까지만 생성할 수 있습니다.");
+        }
     }
 
     private String fetchContentFromS3(String url) {
