@@ -352,6 +352,9 @@ public class IssueServiceImpl implements IssueService {
                 .priority(dto.getPriority())
                 .dueDate(dto.getDueDate())
                 .status(targetStatus) // 보정된 상태값 사용
+                .linkedCommitSha(dto.getLinkedCommitSha())
+                .linkedCommitMessage(dto.getLinkedCommitMessage())
+                .linkedCommitUrl(dto.getLinkedCommitUrl())
                 .build();
 
         issueMapper.updateIssuePartial(updateVo);
@@ -415,6 +418,9 @@ public class IssueServiceImpl implements IssueService {
                 .createdAt(issue.getCreatedAt())
                 .finishedAt(issue.getFinishedAt())
                 .assignees(assignees)
+                .linkedCommitSha(issue.getLinkedCommitSha())
+                .linkedCommitMessage(issue.getLinkedCommitMessage())
+                .linkedCommitUrl(issue.getLinkedCommitUrl())
                 .build();
     }
 
