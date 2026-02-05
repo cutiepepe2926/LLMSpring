@@ -44,6 +44,26 @@ public class ReportController {
         return ResponseEntity.ok(dailyReportService.getOrCreateTodayReport(projectId, userId));
     }
 
+    // 1-1. Git 분석 요청
+    @PostMapping("/daily-reports/analyze")
+    public ResponseEntity<Map<String, String>> analyzeGitCommits(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable Long projectId,
+            @RequestBody Map<String, String> requestBody) {
+
+        String userId = getUserId(authHeader);
+        if (userId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+
+        String date = requestBody.get("date"); // "2026-02-05"
+
+        String analyzedContent = dailyReportService.analyzeGitCommits(projectId, userId, date);
+
+        Map<String, String> response = new HashMap<>();
+        response.put("content", analyzedContent);
+
+        return ResponseEntity.ok(response);
+    }
+
     //2. 리포트 상세 조회
     @GetMapping("/{reportId}")
     public ResponseEntity<DailyReportResponseDTO> getReport(@PathVariable Long projectId, @PathVariable Long reportId) {
