@@ -385,31 +385,6 @@ public class ProjectServiceImpl implements ProjectService {
             response = new ProjectDashboardResponseDTO();
         }
 
-        // 3. [추가] GitHub API를 통해 '오늘 커밋 수' 조회 및 설정
-        try {
-            if (project.getGithubRepoUrl() != null && !project.getGithubRepoUrl().isEmpty()) {
-                // 토큰은 필요하다면 DB에서 조회하거나, public repo인 경우 null
-                String token = null;
-                if (userId != null) {
-                    UserVO user = userMapper.getUserInfo(userId);
-                    if (user != null) {
-                        token = user.getGithubToken(); // UserVO의 githubToken 필드 사용
-
-                    }
-                }
-
-                String decryptedToken = encryptionUtil.decrypt(token);
-                int todayCommits = githubService.getTodayCommitCount(project.getGithubRepoUrl(), decryptedToken);
-                response.setTodayCommitCount(todayCommits);
-            } else {
-                response.setTodayCommitCount(0); // URL 없으면 0개
-            }
-        } catch (Exception e) {
-            // 외부 API 장애로 전체 대시보드가 죽지 않도록 예외 로그만 남기고 0 처리
-            System.err.println("Dashboard Commit Load Fail: " + e.getMessage());
-            response.setTodayCommitCount(222);
-        }
-
         return response;
     }
 
