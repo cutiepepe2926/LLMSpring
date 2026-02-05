@@ -88,7 +88,7 @@ public class AlarmServiceImpl implements AlarmService {
                 projectName, senderName, issueTitle);
 
         // 4. URL 생성 (대시보드로 이동 + 이슈 모달 트리거용 파라미터)
-        String url = String.format("/project/%d/dashboard?issueId=%d", projectId, issueId);
+        String url = String.format("/project/%d/dashboard?tab=ISSUE&issueId=%d", projectId, issueId);
 
         // 5. DB 저장
         AlarmVO alarm = AlarmVO.builder()

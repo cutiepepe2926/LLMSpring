@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.LlmSpring.issue.chat.IssueChatMapper">
+
+    <insert id="insertChat" parameterType="com.example.LlmSpring.issue.chat.IssueChatVO"
+            useGeneratedKeys="true" keyProperty="chatId">
+        INSERT INTO IssueChat (
+            issue_id, project_id, user_id, content, created_at
+        ) VALUES (
+                     #{issueId}, #{projectId}, #{userId}, #{content}, NOW()
+                 )
+    </insert>
+
+    <select id="selectChatListByIssueId" resultType="com.example.LlmSpring.issue.chat.IssueChatVO">
+        SELECT
+            c.chat_id,
+            c.issue_id,
+            c.project_id,
+            c.user_id,
+            c.content,
+            c.created_at,
+            u.name AS senderName
+        FROM IssueChat c
+                 JOIN User u ON c.user_id = u.user_id
+        WHERE c.issue_id = #{issueId}
+        ORDER BY c.created_at ASC
+    </select>
+
+</mapper>
