@@ -71,10 +71,37 @@ public class ReportController {
     }
 
     //3. 리포트 수정 (임시 저장)
-    @PutMapping("/{reportId}")
-    public ResponseEntity<String> updateReport(@PathVariable Long reportId, @RequestBody Map<String, String> body) {
+    @PutMapping("/daily-reports/{reportId}")
+    public ResponseEntity<String> updateReport(
+            @PathVariable Long projectId,
+            @PathVariable Long reportId,
+            @RequestBody Map<String, String> body) {
         dailyReportService.updateReport(reportId, body.get("content"), body.get("title"));
         return ResponseEntity.ok("Updated successfully");
+    }
+
+    // 리포트 직접 생성
+    @PostMapping("/daily-reports")
+    public ResponseEntity<?> createDailyReport(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable Long projectId,
+            @RequestBody Map<String, Object> body) {
+
+        String userId = getUserId(authHeader);
+
+        Object dateObj = body.get("reportDate") != null ? body.get("reportDate") : body.get("date");
+        if (dateObj == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "날짜 정보가 없습니다."));
+        }
+
+        String dateStr = dateObj.toString(); // "2026-02-06"
+        String content = body.get("content") != null ? body.get("content").toString() : "";
+
+        DailyReportResponseDTO res = dailyReportService.getOrCreateTodayReport(projectId, userId);
+
+        dailyReportService.updateReport(res.getReportId(), content, dateStr + " 리포트");
+
+        return ResponseEntity.ok(Map.of("reportId", res.getReportId()));
     }
 
     //4. 리포트 발행 (완료 처리)

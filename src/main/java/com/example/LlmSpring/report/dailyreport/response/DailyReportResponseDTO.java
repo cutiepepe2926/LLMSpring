@@ -4,6 +4,7 @@ import com.example.LlmSpring.report.dailyreport.DailyReportChatLogVO;
 import com.example.LlmSpring.report.dailyreport.DailyReportVO;
 import lombok.Data;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Data
@@ -30,7 +31,7 @@ public class DailyReportResponseDTO {
         this.summary = vo.getSummary();
         this.originalContent = vo.getOriginalContent();
         this.status = vo.getStatus();
-        this.reportDate = vo.getReportDate().toString();
+        this.reportDate = (vo != null && vo.getReportDate() != null) ? vo.getReportDate().toString() : LocalDate.now().toString();
         this.commitCount = vo.getCommitCount();
         this.isPublished = Boolean.TRUE.equals(vo.getIsPublished());
         this.writerName = writerName;

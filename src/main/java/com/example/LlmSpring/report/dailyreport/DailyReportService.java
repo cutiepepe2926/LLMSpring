@@ -3,6 +3,7 @@ package com.example.LlmSpring.report.dailyreport;
 import com.example.LlmSpring.report.dailyreport.response.DailyReportResponseDTO;
 import com.example.LlmSpring.project.ProjectMapper;
 import com.example.LlmSpring.project.ProjectVO;
+import com.example.LlmSpring.task.TaskVO; // TaskVO import 확인
 import com.example.LlmSpring.user.UserMapper;
 import com.example.LlmSpring.user.UserVO;
 import com.example.LlmSpring.util.EncryptionUtil;
@@ -43,45 +44,48 @@ public class DailyReportService {
 
     private final ExecutorService executorService = Executors.newFixedThreadPool(10);
 
-    //1. 리포트 진입 (있으면 조회, 없으면 빈 객체 반환)
     @Transactional
     public DailyReportResponseDTO getOrCreateTodayReport(Long projectId, String userId){
         String today = LocalDate.now().toString();
-
         DailyReportVO existingReport = dailyReportMapper.selectReportByDate(projectId, userId, today);
 
         if (existingReport != null){
             return getReportDetail(existingReport.getReportId());
         }
 
-        // 없으면 빈 DTO 반환 (프론트엔드에서 작성 모드 진입)
-        DailyReportResponseDTO emptyDTO = new DailyReportResponseDTO(new DailyReportVO(), "Unknown");
-        emptyDTO.setContent("# 오늘의 업무\n\n(우측 상단의 'Git 분석' 버튼을 눌러보세요!)");
-        emptyDTO.setReportDate(today);
-        emptyDTO.setReportId(null); // ID null -> 신규 작성
+        DailyReportVO newReport = new DailyReportVO();
+        newReport.setProjectId(projectId);
+        newReport.setUserId(userId);
+        newReport.setReportDate(LocalDate.now()); // [중요] null 방지
+        newReport.setTitle(today + " 리포트");
+        newReport.setContent(""); // 초기값
+        newReport.setDrFilePath("");
+        newReport.setCommitCount(0);
+        newReport.setOriginalContent(true);
+        newReport.setStatus("DRAFT");
 
-        return emptyDTO;
+        dailyReportMapper.insertReport(newReport);
+
+        return convertToDTO(newReport);
     }
 
-    // [추가] Git 분석 (저장 없이 내용만 반환)
     public String analyzeGitCommits(Long projectId, String userId, String date) {
         try {
-            GeneratedContent result = getGeneratedContentFromGithub(projectId, userId);
+            log.info(">>> [Analysis] Start analysis for User: {}, Project: {}", userId, projectId);
+            GeneratedContent result = getGeneratedContent(projectId, userId);
+            log.info(">>> [Analysis] Finished.");
             return result.content;
         } catch (Exception e) {
-            log.error("Git 분석 실패", e);
+            log.error("분석 실패", e);
             return "# 분석 실패\n\n오류가 발생했습니다: " + e.getMessage();
         }
     }
 
-    //2. 리포트 상세 조회
     public DailyReportResponseDTO getReportDetail(Long reportId) {
         DailyReportVO vo = dailyReportMapper.selectReportById(reportId);
         if (vo == null) throw new IllegalArgumentException("Report not found");
 
         DailyReportResponseDTO dto = convertToDTO(vo);
-
-        // S3 URL에서 실제 텍스트 다운로드
         String textContent = fetchContentFromS3(vo.getContent());
         dto.setContent(textContent);
 
@@ -90,30 +94,25 @@ public class DailyReportService {
         return dto;
     }
 
-    //3. 리포트 수정 (S3 업로드 + DB 업데이트)
     @Transactional
     public void updateReport(Long reportId, String content, String title) {
         DailyReportVO existingVO = dailyReportMapper.selectReportById(reportId);
         if(existingVO == null) throw new IllegalArgumentException("Report not found");
 
-        // S3 파일명 생성 (덮어쓰기)
         String dateStr = existingVO.getReportDate().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         String s3Key = String.format("dailyReport/%d/%s_%s.md",
                 existingVO.getProjectId(), dateStr, existingVO.getUserId());
 
-        // S3 업로드
         String s3Url = s3Service.uploadTextContent(s3Key, content);
 
-        // DB 업데이트
         existingVO.setTitle(title);
-        existingVO.setContent(s3Url); // URL 저장
+        existingVO.setContent(s3Url);
         existingVO.setDrFilePath(s3Url);
         existingVO.setOriginalContent(false);
 
         dailyReportMapper.updateReport(existingVO);
     }
 
-    // [추가] 3-1. 리포트 신규 생성 (수동 저장)
     @Transactional
     public void createReportManual(Long projectId, String userId, String dateStr, String content) {
         LocalDate reportDate = LocalDate.parse(dateStr);
@@ -136,36 +135,29 @@ public class DailyReportService {
         dailyReportMapper.insertReport(newReport);
     }
 
-    //4. 리포트 발행
     public void publishReport(Long reportId) {
         dailyReportMapper.updateReportPublishStatus(reportId, "PUBLISHED");
     }
 
-    //5. 일일 리포트 요약 목록 조회
     public List<DailyReportResponseDTO> getDailyReportsByDate(Long projectId, String date) {
         List<DailyReportVO> reports = dailyReportMapper.selectReportsByDate(projectId, date);
         return reports.stream().map(vo -> {
             DailyReportResponseDTO dto = convertToDTO(vo);
-            // 목록 조회 시 미리보기가 필요하다면 S3 다운로드 (성능 고려 필요)
-            // dto.setContent(fetchContentFromS3(vo.getContent()));
             return dto;
         }).collect(Collectors.toList());
     }
 
-    //6. 프로젝트 기여도 통계 조회
     public Map<String, Object> getProjectStats(Long projectId, String period) {
         return dailyReportMapper.selectProjectStats(projectId, period);
     }
 
-    //7. 리포트 수동 재생성
     @Transactional
     public DailyReportResponseDTO regenerateReport(Long reportId) {
         DailyReportVO existingVO = dailyReportMapper.selectReportById(reportId);
         if (existingVO == null) throw new IllegalArgumentException("Report not found");
 
-        GeneratedContent generated = getGeneratedContentFromGithub(existingVO.getProjectId(), existingVO.getUserId());
+        GeneratedContent generated = getGeneratedContent(existingVO.getProjectId(), existingVO.getUserId());
 
-        // S3 덮어쓰기
         String s3Url = s3Service.uploadTextContent(existingVO.getDrFilePath(), generated.content);
 
         existingVO.setCommitCount(generated.commitCount);
@@ -177,7 +169,6 @@ public class DailyReportService {
         return getReportDetail(reportId);
     }
 
-    //8. AI 채팅 기록 조회
     public List<Map<String, Object>> getChatLogs(Long reportId, int page, int size) {
         List<DailyReportChatLogVO> logs = dailyReportMapper.selectChatLogsPaging(reportId, page * size, size);
         List<Map<String, Object>> result = new ArrayList<>();
@@ -190,7 +181,6 @@ public class DailyReportService {
         return result;
     }
 
-    //9. AI 채팅 전송
     @Transactional
     public Map<String, Object> sendChatToAI(Long reportId, String message, String currentContent) {
         DailyReportChatLogVO userLog = new DailyReportChatLogVO();
@@ -222,7 +212,6 @@ public class DailyReportService {
         return response;
     }
 
-    //10. AI 제안 적용 로그 저장
     public void saveSuggestionLog(Long reportId, String suggestion, boolean isApplied) {
         DailyReportChatLogVO log = new DailyReportChatLogVO();
         log.setReportId(reportId);
@@ -232,23 +221,19 @@ public class DailyReportService {
         dailyReportMapper.insertChatLog(log);
     }
 
-    //11. 리포트 설정 조회
     public Map<String, Object> getReportSettings(Long projectId) {
         return dailyReportMapper.selectReportSettings(projectId);
     }
 
-    //12. 리포트 설정 변경
     public void updateReportSettings(Long projectId, Map<String, Object> settings) {
         dailyReportMapper.updateReportSettings(projectId, settings);
     }
 
-    //VO -> DTO 변환
     private DailyReportResponseDTO convertToDTO(DailyReportVO vo){
         String userName = dailyReportMapper.selectUserName(vo.getUserId());
         return new DailyReportResponseDTO(vo, userName);
     }
 
-    // [추가] S3 텍스트 다운로드 헬퍼
     private String fetchContentFromS3(String url) {
         if (url == null || !url.startsWith("http")) return url;
         try {
@@ -266,7 +251,6 @@ public class DailyReportService {
 
     // --- [ GitHub & GEMINI Methods ] ---
 
-    // 내부 데이터 전달용 클래스
     private static class GeneratedContent {
         String content;
         int commitCount;
@@ -276,31 +260,46 @@ public class DailyReportService {
         }
     }
 
-    private GeneratedContent getGeneratedContentFromGithub(Long projectId, String userId) {
+    // Git 커밋 + DB Task를 모두 가져와서 분석
+    private GeneratedContent getGeneratedContent(Long projectId, String userId) {
         String aiContent = "금일 진행한 업무 내용을 작성해주세요.";
         int commitCount = 0;
 
         try {
+            // 1. 오늘 완료된 Task 가져오기 (DB)
+            List<TaskVO> todayTasks = dailyReportMapper.selectTodayTasks(projectId.intValue(), userId);
+
+            log.info(">>> [DB Task 조회] 개수: {}", todayTasks.size());
+            if(!todayTasks.isEmpty()) {
+                for(TaskVO t : todayTasks) {
+                    log.info(" - Task: {}, Status: {}", t.getTitle(), t.getStatus());
+                }
+            }
+
+            // 2. Git 커밋 가져오기 (GitHub API)
             UserVO user = userMapper.getUserInfo(userId);
             ProjectVO project = projectMapper.selectProjectById(projectId);
+            List<Map<String, Object>> commits = new ArrayList<>();
 
             if (user != null && project != null && user.getGithubToken() != null && project.getGithubRepoUrl() != null) {
                 String decryptedToken = encryptionUtil.decrypt(user.getGithubToken());
                 String realGithubUsername = fetchGithubUsername(decryptedToken);
 
                 if (realGithubUsername != null) {
-                    List<Map<String, Object>> commits = fetchAllMyRecentCommits(
+                    commits = fetchAllMyRecentCommits(
                             project.getGithubRepoUrl(), realGithubUsername, decryptedToken
                     );
                     commitCount = commits.size();
-
-                    if (!commits.isEmpty()) {
-                        aiContent = generateAiSummary(commits);
-                    } else {
-                        aiContent = "### 🚫 금일 커밋 내역 없음\n- '" + realGithubUsername + "' 계정으로 조회된 최근 24시간 커밋이 없습니다.";
-                    }
                 }
             }
+
+            // 3. AI에게 두 데이터 합쳐서 보내기 (데이터가 하나라도 있으면 분석 요청)
+            if (!commits.isEmpty() || !todayTasks.isEmpty()) {
+                aiContent = generateAiSummary(commits, todayTasks);
+            } else {
+                aiContent = "### 🚫 금일 활동 내역 없음\n- 완료된 업무(Task)나 GitHub 커밋 내역이 없습니다.";
+            }
+
         } catch (Exception e) {
             log.error("AI 리포트 생성 실패", e);
             aiContent = "AI 자동 생성에 실패했습니다. (오류: " + e.getMessage() + ")";
@@ -339,6 +338,7 @@ public class DailyReportService {
         String owner = parts[parts.length - 2];
         String repo = parts[parts.length - 1];
 
+        // 24시간 조회
         ZonedDateTime nowKST = ZonedDateTime.now(ZoneId.of("Asia/Seoul"));
         ZonedDateTime sinceKST = nowKST.minusHours(24);
         String since = sinceKST.withZoneSameInstant(ZoneId.of("UTC")).format(DateTimeFormatter.ISO_INSTANT);
@@ -360,7 +360,6 @@ public class DailyReportService {
                 }
             }
         } catch (Exception e) {
-            log.error("브랜치 목록 조회 실패", e);
             branches.add("main");
         }
 
@@ -370,8 +369,8 @@ public class DailyReportService {
         for (String branch : branches) {
             try {
                 String commitsUrl = String.format(
-                        "https://api.github.com/repos/%s/%s/commits?per_page=10&sha=%s&author=%s&since=%s",
-                        owner, repo, branch, githubId, since
+                        "https://api.github.com/repos/%s/%s/commits?per_page=20&sha=%s&since=%s",
+                        owner, repo, branch, since
                 );
 
                 ResponseEntity<List> response = restTemplate.exchange(commitsUrl, HttpMethod.GET, entity, List.class);
@@ -385,7 +384,7 @@ public class DailyReportService {
                     }
                 }
             } catch (Exception e) {
-                log.warn("브랜치 커밋 조회 실패 (" + branch + "): " + e.getMessage());
+                // ignore
             }
         }
 
@@ -445,49 +444,49 @@ public class DailyReportService {
         return filtered;
     }
 
-    private String generateAiSummary(List<Map<String, Object>> commitData) {
+    // [수정] 커밋 + 업무 데이터를 함께 JSON으로 묶어서 프롬프트 생성
+    private String generateAiSummary(List<Map<String, Object>> commitData, List<TaskVO> taskData) {
         String geminiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-latest:generateContent?key=" + geminiApiKey;
         ObjectMapper objectMapper = new ObjectMapper();
-        String jsonCommitData;
+
+        String jsonInput = "";
         try{
-            jsonCommitData = objectMapper.writeValueAsString(commitData);
+            Map<String, Object> combinedData = new HashMap<>();
+            combinedData.put("commits", commitData); // Git 커밋
+            combinedData.put("tasks", taskData);     // DB Task
+            jsonInput = objectMapper.writeValueAsString(combinedData);
         }catch (Exception e){
-            jsonCommitData = commitData.toString();
+            jsonInput = "Error parsing data";
         }
 
         String prompt = """
             ## Role
-            당신은 소프트웨어 개발 프로젝트의 변경 사항을 문서화하는 전문 테크니컬 라이터입니다.
-            제공된 커밋 데이터(JSON)를 분석하여 팀 공유용 기술 리포트를 작성하십시오.
-            JSON 데이터에는 각 커밋이 속한 브랜치 정보("branches")가 포함되어 있습니다.
+            당신은 개발 팀의 일일 스크럼 마스터입니다.
+            제공된 'Git 커밋 데이터(commits)'와 '완료된 업무 데이터(tasks)'를 종합하여 '오늘의 업무 리포트'를 작성하세요.
 
             ## Constraints
-            1. **Tone**: 본문은 건조하고 전문적인 문체를 사용하십시오. (해요체 금지, 하십시오체 또는 명사형 종결 사용)
-            2. **Format**: Notion과 호환되는 Markdown 형식을 엄수하십시오.
-            3. **Grouping**: **반드시 '브랜치(Branch)'를 기준으로 커밋 내용을 그룹화하여 작성하십시오.**
-            4. **Fact-based**: 제공된 데이터에 없는 내용을 추론하거나 꾸며내지 마십시오.
+            1. **파일 경로(`src/main/...`)를 절대 나열하지 마십시오.**
+            2. 커밋 메시지와 업무 제목을 분석하여 **'어떤 기능을 구현했는지'** 자연스러운 문장으로 서술하십시오.
+            3. 기술적 세부 사항보다는 **비즈니스 기능(Feature) 중심**으로 요약하십시오.
+            4. 같은 브랜치나 같은 업무 맥락은 하나로 묶어서 요약하십시오.
 
-            ## Output Structure
-            리포트는 반드시 아래의 구조를 따라야 합니다.
-
-            ### 1. 📅 커밋 타임라인
-            - 전체 커밋을 시간순으로 나열한 요약 그래프입니다.
-            - 포맷: `YYYY-MM-DD HH:mm` | `[BranchName]` | `커밋 메시지`
-
-            ### 2. 🌿 브랜치별 상세 작업 내역
-            작업된 브랜치 별로 섹션을 나누어 상세 내용을 기술하십시오.
+            ## Output Format (Markdown)
             
-            #### 📂 [브랜치 이름] (예: feature/login)
-            **[Commit Hash 7자리] 커밋 메시지**
-             - **변경 사항**: (코드의 핵심 변경 내용 요약)
-             - **상세**: (추가/수정/삭제된 파일 및 로직 설명)
+            # 📅 금일 업무 요약
+            (전체 작업을 3줄 이내로 핵심 요약)
 
-            ### 3. 📝 금일 작업 요약 (Executive Summary)
-            - 전체 브랜치의 작업을 통합하여 비즈니스 관점에서 3~5문장으로 요약하십시오.
-            - **반드시 "금일 작업 내용은..."으로 시작하십시오.**
+            # 🚀 상세 구현 사항
+            ## [브랜치명 또는 주요 기능명]
+            - **기능 구현**: (커밋/업무 내용을 기반으로 한글 요약)
+            - **상세 내용**: (구현된 로직 설명)
+
+            # ✅ 금일 업무 현황 (Task)
+            (tasks 데이터를 바탕으로 아래와 같이 리스트 출력. tasks 데이터가 없으면 '해당 없음' 표시)
+            - **[업무 상태]** 업무 제목
+              (예: - **[DONE]** 로그인 페이지 퍼블리싱)
 
             ## Input Data (JSON)
-            """ + jsonCommitData;
+            """ + jsonInput;
 
         Map<String, Object> requestBody = new HashMap<>();
         Map<String, Object> content = new HashMap<>();
