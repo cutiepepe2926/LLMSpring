@@ -22,8 +22,12 @@
 
     <select id="selectProjectInfo" resultType="com.example.LlmSpring.sidebar.response.ProjectSidebarResponseDTO">
         SELECT
-            name,
-            status,
+            project_id as projectId,
+            name as projectName,
+            CASE
+                WHEN deleted_at IS NOT NULL THEN 'DELETE'
+                ELSE status
+                END as projectStatus,
             daily_report_time AS dailyReportTime,
             github_repo_url AS githubUrl
         FROM Project
