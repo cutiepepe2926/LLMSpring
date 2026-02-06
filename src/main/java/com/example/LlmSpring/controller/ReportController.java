@@ -8,7 +8,7 @@ import com.example.LlmSpring.report.finalreport.FinalReportVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal; // 추가됨
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
@@ -26,36 +26,28 @@ public class ReportController {
     private final FinalReportService finalReportService;
     private final AiChatService aiChatService;
 
-
     // 1. 리포트 작성 페이지 진입
     @PostMapping("/today")
     public ResponseEntity<DailyReportResponseDTO> createOrGetTodayReport(
             @AuthenticationPrincipal String userId,
             @PathVariable Long projectId) {
-
-
         return ResponseEntity.ok(dailyReportService.getOrCreateTodayReport(projectId, userId));
     }
 
-    // 2. 리포트 상세 조회 (인증 불필요한 경우 유지)
     // 1-1. Git 분석 요청
     @PostMapping("/daily-reports/analyze")
     public ResponseEntity<Map<String, Object>> analyzeGitCommits(
-            @RequestHeader("Authorization") String authHeader,
+            @AuthenticationPrincipal String userId,
             @PathVariable Long projectId,
             @RequestBody Map<String, String> requestBody) {
 
-        String userId = getUserId(authHeader);
-        if (userId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-
         String date = requestBody.get("date");
-
         Map<String, Object> response = dailyReportService.analyzeGitCommits(projectId, userId, date);
 
         return ResponseEntity.ok(response);
     }
 
-    //2. 리포트 상세 조회
+    // 2. 리포트 상세 조회
     @GetMapping("/{reportId}")
     public ResponseEntity<DailyReportResponseDTO> getReport(@PathVariable Long projectId, @PathVariable Long reportId) {
         return ResponseEntity.ok(dailyReportService.getReportDetail(reportId));
@@ -63,8 +55,40 @@ public class ReportController {
 
     // 3. 리포트 수정 (임시 저장)
     @PutMapping("/{reportId}")
-    public void updateReport(@PathVariable Long reportId, @RequestBody Map<String, String> body) {
-        dailyReportService.updateReport(reportId, body.get("content"), body.get("title"));
+    public ResponseEntity<String> updateReport(@PathVariable Long reportId, @RequestBody Map<String, String> body) {
+
+        String content = body.get("content");
+        String title = body.get("title");
+        String summary = body.get("summary");
+        Integer commitCount = body.get("commitCount") != null ? Integer.parseInt(body.get("commitCount").toString()) : 0;
+
+        dailyReportService.updateReport(reportId, content, title, summary, commitCount);
+        return ResponseEntity.ok("Updated successfully");
+    }
+
+    // 리포트 직접 생성
+    @PostMapping("/daily-reports")
+    public ResponseEntity<?> createDailyReport(
+            @AuthenticationPrincipal String userId,
+            @PathVariable Long projectId,
+            @RequestBody Map<String, Object> body) {
+
+
+        Object dateObj = body.get("reportDate") != null ? body.get("reportDate") : body.get("date");
+        if (dateObj == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "날짜 정보가 없습니다."));
+        }
+
+        String dateStr = dateObj.toString(); // "2026-02-06"
+        String content = body.get("content") != null ? body.get("content").toString() : "";
+        String summary = (String) body.get("summary");
+        Integer commitCount = body.get("commitCount") != null ? Integer.parseInt(body.get("commitCount").toString()) : 0;
+
+        DailyReportResponseDTO res = dailyReportService.getOrCreateTodayReport(projectId, userId);
+
+        dailyReportService.updateReport(res.getReportId(), content, dateStr + " 리포트", summary, commitCount);
+
+        return ResponseEntity.ok(Map.of("reportId", res.getReportId()));
     }
 
     // 4. 리포트 발행 (완료 처리)
@@ -173,7 +197,6 @@ public class ReportController {
             @PathVariable Long finalReportId,
             @RequestBody Map<String, Object> body
     ){
-
         // 데이터 추출
         Object titleObj = body.get("title");
         String title = titleObj != null ? titleObj.toString() : "";
@@ -192,7 +215,6 @@ public class ReportController {
             @PathVariable Long projectId,
             @RequestBody Map<String, Object> body
     ){
-
         Object titleObj = body.get("title");
         String title = titleObj != null ? titleObj.toString() : "제목 없음";
 
