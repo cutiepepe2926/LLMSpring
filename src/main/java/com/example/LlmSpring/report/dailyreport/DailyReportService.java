@@ -3,7 +3,7 @@ package com.example.LlmSpring.report.dailyreport;
 import com.example.LlmSpring.report.dailyreport.response.DailyReportResponseDTO;
 import com.example.LlmSpring.project.ProjectMapper;
 import com.example.LlmSpring.project.ProjectVO;
-import com.example.LlmSpring.task.TaskVO; // TaskVO import 확인
+import com.example.LlmSpring.task.TaskVO;
 import com.example.LlmSpring.user.UserMapper;
 import com.example.LlmSpring.user.UserVO;
 import com.example.LlmSpring.util.EncryptionUtil;
@@ -69,15 +69,26 @@ public class DailyReportService {
         return convertToDTO(newReport);
     }
 
-    public String analyzeGitCommits(Long projectId, String userId, String date) {
+    public Map<String, Object> analyzeGitCommits(Long projectId, String userId, String date) {
         try {
-            log.info(">>> [Analysis] Start analysis for User: {}, Project: {}", userId, projectId);
-            GeneratedContent result = getGeneratedContent(projectId, userId);
-            log.info(">>> [Analysis] Finished.");
-            return result.content;
+            log.info(">>> [Analysis] Start for User: {}, Date: {}", userId, date);
+
+            GeneratedContent result = getGeneratedContent(projectId, userId, date);
+
+            log.info(">>> [Analysis] Finished. Commits: {}", result.commitCount);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("content", result.content);
+            response.put("commitCount", result.commitCount);
+            response.put("summary", "");
+
+            return response;
         } catch (Exception e) {
             log.error("분석 실패", e);
-            return "# 분석 실패\n\n오류가 발생했습니다: " + e.getMessage();
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("content", "# 분석 실패\n\n오류가 발생했습니다: " + e.getMessage());
+            errorResponse.put("commitCount", 0);
+            return errorResponse;
         }
     }
 
@@ -95,7 +106,7 @@ public class DailyReportService {
     }
 
     @Transactional
-    public void updateReport(Long reportId, String content, String title) {
+    public void updateReport(Long reportId, String content, String title, String summary, Integer commitCount) {
         DailyReportVO existingVO = dailyReportMapper.selectReportById(reportId);
         if(existingVO == null) throw new IllegalArgumentException("Report not found");
 
@@ -109,6 +120,13 @@ public class DailyReportService {
         existingVO.setContent(s3Url);
         existingVO.setDrFilePath(s3Url);
         existingVO.setOriginalContent(false);
+
+        if (summary != null) {
+            existingVO.setSummary(summary);
+        }
+        if (commitCount != null) {
+            existingVO.setCommitCount(commitCount);
+        }
 
         dailyReportMapper.updateReport(existingVO);
     }
@@ -156,7 +174,9 @@ public class DailyReportService {
         DailyReportVO existingVO = dailyReportMapper.selectReportById(reportId);
         if (existingVO == null) throw new IllegalArgumentException("Report not found");
 
-        GeneratedContent generated = getGeneratedContent(existingVO.getProjectId(), existingVO.getUserId());
+        // 리포트의 날짜를 문자열로 변환하여 전달
+        String dateStr = existingVO.getReportDate().toString();
+        GeneratedContent generated = getGeneratedContent(existingVO.getProjectId(), existingVO.getUserId(), dateStr);
 
         String s3Url = s3Service.uploadTextContent(existingVO.getDrFilePath(), generated.content);
 
@@ -261,22 +281,13 @@ public class DailyReportService {
     }
 
     // Git 커밋 + DB Task를 모두 가져와서 분석
-    private GeneratedContent getGeneratedContent(Long projectId, String userId) {
+    private GeneratedContent getGeneratedContent(Long projectId, String userId, String targetDate) {
         String aiContent = "금일 진행한 업무 내용을 작성해주세요.";
         int commitCount = 0;
 
         try {
-            // 1. 오늘 완료된 Task 가져오기 (DB)
             List<TaskVO> todayTasks = dailyReportMapper.selectTodayTasks(projectId.intValue(), userId);
 
-            log.info(">>> [DB Task 조회] 개수: {}", todayTasks.size());
-            if(!todayTasks.isEmpty()) {
-                for(TaskVO t : todayTasks) {
-                    log.info(" - Task: {}, Status: {}", t.getTitle(), t.getStatus());
-                }
-            }
-
-            // 2. Git 커밋 가져오기 (GitHub API)
             UserVO user = userMapper.getUserInfo(userId);
             ProjectVO project = projectMapper.selectProjectById(projectId);
             List<Map<String, Object>> commits = new ArrayList<>();
@@ -286,14 +297,14 @@ public class DailyReportService {
                 String realGithubUsername = fetchGithubUsername(decryptedToken);
 
                 if (realGithubUsername != null) {
+                    // targetDate 전달
                     commits = fetchAllMyRecentCommits(
-                            project.getGithubRepoUrl(), realGithubUsername, decryptedToken
+                            project.getGithubRepoUrl(), realGithubUsername, decryptedToken, targetDate
                     );
                     commitCount = commits.size();
                 }
             }
 
-            // 3. AI에게 두 데이터 합쳐서 보내기 (데이터가 하나라도 있으면 분석 요청)
             if (!commits.isEmpty() || !todayTasks.isEmpty()) {
                 aiContent = generateAiSummary(commits, todayTasks);
             } else {
@@ -331,7 +342,7 @@ public class DailyReportService {
         return null;
     }
 
-    private List<Map<String, Object>> fetchAllMyRecentCommits(String repoUrl, String githubId, String token) {
+    private List<Map<String, Object>> fetchAllMyRecentCommits(String repoUrl, String githubId, String token, String targetDate) {
         String[] parts = repoUrl.replace(".git", "").split("/");
         if (parts.length < 2) return Collections.emptyList();
 
@@ -339,9 +350,16 @@ public class DailyReportService {
         String repo = parts[parts.length - 1];
 
         // 24시간 조회
-        ZonedDateTime nowKST = ZonedDateTime.now(ZoneId.of("Asia/Seoul"));
-        ZonedDateTime sinceKST = nowKST.minusHours(24);
-        String since = sinceKST.withZoneSameInstant(ZoneId.of("UTC")).format(DateTimeFormatter.ISO_INSTANT);
+        String since;
+        try {
+            LocalDate date = LocalDate.parse(targetDate);
+            ZonedDateTime startOfDayKST = date.atStartOfDay(ZoneId.of("Asia/Seoul"));
+            since = startOfDayKST.withZoneSameInstant(ZoneId.of("UTC")).format(DateTimeFormatter.ISO_INSTANT);
+        } catch (Exception e) {
+            // 날짜 파싱 에러 시 그냥 24시간 전으로 fallback
+            since = ZonedDateTime.now(ZoneId.of("Asia/Seoul")).minusHours(24)
+                    .withZoneSameInstant(ZoneId.of("UTC")).format(DateTimeFormatter.ISO_INSTANT);
+        }
 
         RestTemplate restTemplate = new RestTemplate();
         HttpHeaders headers = new HttpHeaders();
@@ -369,7 +387,7 @@ public class DailyReportService {
         for (String branch : branches) {
             try {
                 String commitsUrl = String.format(
-                        "https://api.github.com/repos/%s/%s/commits?per_page=20&sha=%s&since=%s",
+                        "https://api.github.com/repos/%s/%s/commits?per_page=100&sha=%s&since=%s",
                         owner, repo, branch, since
                 );
 

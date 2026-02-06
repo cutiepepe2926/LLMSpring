@@ -17,28 +17,34 @@
     </select>
 
     <select id="selectReportByDate" resultType="com.example.LlmSpring.report.dailyreport.DailyReportVO">
-        SELECT * FROM DailyReport
-        WHERE project_id = #{projectId} AND user_id = #{userId} AND report_date = #{date}
+        SELECT dr.*, pm.role
+        FROM DailyReport dr
+                 LEFT JOIN ProjectMember pm ON dr.project_id = pm.project_id AND dr.user_id = pm.user_id
+        WHERE dr.project_id = #{projectId} AND dr.user_id = #{userId} AND dr.report_date = #{date}
     </select>
 
     <insert id="insertReport" useGeneratedKeys="true" keyProperty="reportId">
         INSERT INTO DailyReport (
-            project_id, user_id, report_date, title, content,
+            project_id, user_id, report_date, title, content, summary,
             status, commit_count, is_published, original_content, dr_file_path
         ) VALUES (
-                     #{projectId}, #{userId}, #{reportDate}, #{title}, #{content},
+                     #{projectId}, #{userId}, #{reportDate}, #{title}, #{content}, #{summary},
                      'DRAFT', #{commitCount}, false, #{originalContent}, #{drFilePath}
                  )
     </insert>
 
     <select id="selectReportById" resultType="com.example.LlmSpring.report.dailyreport.DailyReportVO">
-        SELECT * FROM DailyReport WHERE report_id = #{reportId}
+        SELECT dr.*, pm.role
+        FROM DailyReport dr
+                 LEFT JOIN ProjectMember pm ON dr.project_id = pm.project_id AND dr.user_id = pm.user_id
+        WHERE dr.report_id = #{reportId}
     </select>
 
     <update id="updateReport">
         UPDATE DailyReport
         SET title = #{title},
             content = #{content},
+            summary = #{summary},
             dr_file_path = #{drFilePath},
             original_content = #{originalContent},
             commit_count = #{commitCount},
@@ -55,8 +61,10 @@
     </update>
 
     <select id="selectReportsByDate" resultType="com.example.LlmSpring.report.dailyreport.DailyReportVO">
-        SELECT * FROM DailyReport
-        WHERE project_id = #{projectId} AND report_date = #{date}
+        SELECT dr.*, pm.role
+        FROM DailyReport dr
+                 LEFT JOIN ProjectMember pm ON dr.project_id = pm.project_id AND dr.user_id = pm.user_id
+        WHERE dr.project_id = #{projectId} AND dr.report_date = #{date}
     </select>
 
     <select id="selectProjectStats" resultType="map">

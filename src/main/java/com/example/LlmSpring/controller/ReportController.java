@@ -46,7 +46,7 @@ public class ReportController {
 
     // 1-1. Git 분석 요청
     @PostMapping("/daily-reports/analyze")
-    public ResponseEntity<Map<String, String>> analyzeGitCommits(
+    public ResponseEntity<Map<String, Object>> analyzeGitCommits(
             @RequestHeader("Authorization") String authHeader,
             @PathVariable Long projectId,
             @RequestBody Map<String, String> requestBody) {
@@ -54,12 +54,9 @@ public class ReportController {
         String userId = getUserId(authHeader);
         if (userId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 
-        String date = requestBody.get("date"); // "2026-02-05"
+        String date = requestBody.get("date");
 
-        String analyzedContent = dailyReportService.analyzeGitCommits(projectId, userId, date);
-
-        Map<String, String> response = new HashMap<>();
-        response.put("content", analyzedContent);
+        Map<String, Object> response = dailyReportService.analyzeGitCommits(projectId, userId, date);
 
         return ResponseEntity.ok(response);
     }
@@ -75,8 +72,14 @@ public class ReportController {
     public ResponseEntity<String> updateReport(
             @PathVariable Long projectId,
             @PathVariable Long reportId,
-            @RequestBody Map<String, String> body) {
-        dailyReportService.updateReport(reportId, body.get("content"), body.get("title"));
+            @RequestBody Map<String, Object> body) {
+
+        String content = (String) body.get("content");
+        String title = (String) body.get("title");
+        String summary = (String) body.get("summary");
+        Integer commitCount = body.get("commitCount") != null ? Integer.parseInt(body.get("commitCount").toString()) : 0;
+
+        dailyReportService.updateReport(reportId, content, title, summary, commitCount);
         return ResponseEntity.ok("Updated successfully");
     }
 
@@ -96,10 +99,12 @@ public class ReportController {
 
         String dateStr = dateObj.toString(); // "2026-02-06"
         String content = body.get("content") != null ? body.get("content").toString() : "";
+        String summary = (String) body.get("summary");
+        Integer commitCount = body.get("commitCount") != null ? Integer.parseInt(body.get("commitCount").toString()) : 0;
 
         DailyReportResponseDTO res = dailyReportService.getOrCreateTodayReport(projectId, userId);
 
-        dailyReportService.updateReport(res.getReportId(), content, dateStr + " 리포트");
+        dailyReportService.updateReport(res.getReportId(), content, dateStr + " 리포트", summary, commitCount);
 
         return ResponseEntity.ok(Map.of("reportId", res.getReportId()));
     }

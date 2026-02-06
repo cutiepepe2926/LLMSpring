@@ -13,17 +13,16 @@ public class DailyReportResponseDTO {
     private String title;
     private String content;
     private String summary;
-    private Boolean originalContent; //true: 초안, false: 수정됨
+    private Boolean originalContent;
     private String status;
     private String reportDate;
     private Integer commitCount;
     private boolean isPublished;
     private String writerName;
-
-    //AI 채팅 기록
+    private String userId;
+    private String role;
     private List<DailyReportChatLogVO> chatLogs;
 
-    //VO -> DTO 변환 생성자
     public DailyReportResponseDTO(DailyReportVO vo, String writerName) {
         this.reportId = vo.getReportId();
         this.title = vo.getTitle();
@@ -35,5 +34,9 @@ public class DailyReportResponseDTO {
         this.commitCount = vo.getCommitCount();
         this.isPublished = Boolean.TRUE.equals(vo.getIsPublished());
         this.writerName = writerName;
+
+        // serId와 role 매핑
+        this.userId = vo.getUserId();
+        this.role = (vo.getRole() != null) ? vo.getRole() : "MEMBER";
     }
 }
