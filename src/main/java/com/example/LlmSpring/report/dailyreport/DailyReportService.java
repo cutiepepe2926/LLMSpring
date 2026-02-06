@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
@@ -131,6 +132,21 @@ public class DailyReportService {
         dailyReportMapper.insertReport(newReport);
 
         return convertToDTO(newReport);
+    }
+
+    // 스케줄러 전용 비동기 메서드
+    @Async
+    public void createSystemReportAsync(Long projectId, String userId){
+        try{
+            log.info(">>> [Async Start] Generating report for User: {} in Project: {}", userId, projectId);
+
+            // 기존의 리포트 생성 로직 호출 (이미 잘 구현된 메서드 재사용)
+            getOrCreateTodayReport(projectId, userId);
+
+            log.info(">>> [Async End] Report generated for User: {}", userId);
+        } catch (Exception e){
+            log.error("Failed to generate async report for user: " + userId, e);
+        }
     }
 
     // --- [ GitHub & GEMINI Methods ] ---
