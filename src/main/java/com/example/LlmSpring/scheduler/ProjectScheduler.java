@@ -1,15 +1,21 @@
 package com.example.LlmSpring.scheduler;
 
 import com.example.LlmSpring.alarm.AlarmMapper;
+import com.example.LlmSpring.alarm.AlarmService;
 import com.example.LlmSpring.alarm.AlarmVO;
 import com.example.LlmSpring.project.ProjectMapper;
 import com.example.LlmSpring.project.ProjectVO;
+import com.example.LlmSpring.projectMember.ProjectMemberMapper;
+import com.example.LlmSpring.report.dailyreport.DailyReportService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -21,6 +27,7 @@ public class ProjectScheduler {
 
     private final ProjectMapper projectMapper;
     private final AlarmMapper alarmMapper;
+    private final DailyReportService dailyReportService;
 
     /**
      * 매일 자정(00:00:00)에 실행
@@ -30,14 +37,28 @@ public class ProjectScheduler {
     @Scheduled(cron = "0 0 0 * * *")
     @Transactional
     public void runDailyProjectCheck() {
-        log.info(">>> [Scheduler] Daily Project Check Started...");
-
         checkDueTomorrowProjects(); // 마감 임박 D-1
         checkOverdueProjects(); // 자동 완료 D-Day+1
         checkHardDeleteDueTomorrow(); // 영구 삭제 예고 D-1
         notifyPermanentDelete();         // 영구 삭제 알림 (D-Day+1)
+    }
 
-        log.info(">>> [Scheduler] Daily Project Check Finished.");
+    @Scheduled(cron = "0 * * * * *")
+    public void scheduleDailyReportGeneration(){
+        // 1. 현재 시간
+        LocalTime now = LocalTime.now(ZoneId.of("Asia/Seoul")).truncatedTo(ChronoUnit.MINUTES);
+        // 시간을 문자열 "HH:mm" (예: "12:00")으로 변환
+        String timeStr = now.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
+        // 2. 해당 시간에 리포트를 생성해야 하는 프로젝트 조회
+        List<ProjectVO> targetProjects = projectMapper.selectProjectsByReportTime(timeStr);
+        if(targetProjects.isEmpty()){
+            return;
+        }
+
+        // 3. 각 프로젝트의 멤버별로 리포트 생성 요청
+        for(ProjectVO project: targetProjects){
+            triggerReportForMembers(project);
+        }
     }
 
     // 1. 마감 임박 프로젝트 처리
@@ -151,6 +172,22 @@ public class ProjectScheduler {
         if (!alarmList.isEmpty()) {
             alarmMapper.insertAlarmsBatch(alarmList);
             log.info(">>> [Hard-Delete Notice] Sent {} alarms for 7-day expiration.", alarmList.size());
+        }
+    }
+
+    // 일일 리포트 생성
+    private void triggerReportForMembers(ProjectVO project){
+        try{
+            List<String> memberIds = projectMapper.getActiveMemberIds(project.getProjectId());
+
+            for(String memberId: memberIds){
+                dailyReportService.createSystemReportAsync(project.getProjectId().longValue(), memberId);
+            }
+
+            log.info("Triggered async daily reports for project: {}", project.getName());
+
+        }catch (Exception e){
+            log.error("Error triggering report for project: " + project.getProjectId(), e);
         }
     }
 }

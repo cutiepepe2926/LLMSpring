@@ -1,5 +1,6 @@
 package com.example.LlmSpring.report.dailyreport;
 
+import com.example.LlmSpring.alarm.AlarmService;
 import com.example.LlmSpring.report.dailyreport.response.DailyReportResponseDTO;
 import com.example.LlmSpring.project.ProjectMapper;
 import com.example.LlmSpring.project.ProjectVO;
@@ -11,6 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
@@ -36,6 +38,7 @@ public class DailyReportService {
     private final ProjectMapper projectMapper;   // 프로젝트 정보(Repo URL) 조회용
     private final EncryptionUtil encryptionUtil; // 토큰 복호화용
     private final S3Service s3Service;
+    private final AlarmService alarmService;
 
     @Value("${gemini.api.key}")
     private String geminiApiKey;
@@ -131,6 +134,33 @@ public class DailyReportService {
         dailyReportMapper.insertReport(newReport);
 
         return convertToDTO(newReport);
+    }
+
+    // 스케줄러 전용 비동기 메서드
+    @Async
+    public void createSystemReportAsync(Long projectId, String userId) {
+        try {
+            log.info(">>> [Async Start] Generating report for User: {} in Project: {}", userId, projectId);
+
+            // 1. 리포트 생성
+            getOrCreateTodayReport(projectId, userId);
+
+            // 2. 알림 발송
+            // 프로젝트 이름 조회
+            ProjectVO project = projectMapper.selectProjectById(projectId);
+            String projectName = (project != null) ? project.getName() : "프로젝트";
+
+            String alarmContent = "[" + projectName + "] 의 일일 리포트가 생성되었습니다.";
+            String targetUrl = "/project/" + projectId + "/dashboard";
+
+            // 알림 전송
+            alarmService.createAlarm(userId, alarmContent, "DAILY_REPORT", targetUrl);
+
+            log.info(">>> [Async End] Report generated and Alarm sent for User: {}", userId);
+
+        } catch (Exception e) {
+            log.error("Failed to generate async report for user: " + userId, e);
+        }
     }
 
     // --- [ GitHub & GEMINI Methods ] ---
