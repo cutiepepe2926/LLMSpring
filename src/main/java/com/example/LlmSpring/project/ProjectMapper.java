@@ -79,7 +79,7 @@ public interface ProjectMapper {
     List<ProjectVO> getOverdueActiveProjects();
 
     // [Scheduler] 3. 현재 시간에 리포트를 생성해야 하는 활성 프로젝트 조회
-    List<ProjectVO> selectProjectsByReportTime(@Param("currentTime") LocalTime currentTime);
+    List<ProjectVO> selectProjectsByReportTime(@Param("currentTime") String currentTime);
 
     // [Scheduler] 4. 특정 프로젝트의 알림 대상 멤버 ID 조회 (ACTIVE 상태 & 탈퇴 안 한 사람)
     List<String> getActiveMemberIds(@Param("projectId") int projectId);

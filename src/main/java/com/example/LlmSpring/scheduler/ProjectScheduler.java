@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
@@ -47,10 +48,16 @@ public class ProjectScheduler {
     @Scheduled(cron = "0 * * * * *")
     public void scheduleDailyReportGeneration(){
         // 1. 현재 시간
-        LocalTime now = LocalTime.now().truncatedTo(ChronoUnit.MINUTES);
+        LocalTime now = LocalTime.now(ZoneId.of("Asia/Seoul")).truncatedTo(ChronoUnit.MINUTES);
+        // 시간을 문자열 "HH:mm" (예: "12:00")으로 변환
+        String timeStr = now.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
+
+        log.info(">>> [Scheduler] Checking Daily Report for time: {}", timeStr);
 
         // 2. 해당 시간에 리포트를 생성해야 하는 프로젝트 조회
-        List<ProjectVO> targetProjects = projectMapper.selectProjectsByReportTime(now);
+        List<ProjectVO> targetProjects = projectMapper.selectProjectsByReportTime(timeStr);
+
+        log.info(">>> [Scheduler] Found {} projects to report.", targetProjects.size());
 
         if(targetProjects.isEmpty()){
             return;

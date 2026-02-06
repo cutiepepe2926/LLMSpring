@@ -282,11 +282,11 @@
 
     <select id="selectProjectsByReportTime" resultType="com.example.LlmSpring.project.ProjectVO">
         SELECT *
-        FROM project
+        FROM Project
         WHERE status = 'ACTIVE'
-          AND daily_report_time IS NOT NULL
-          AND DATE_FORMAT(daily_report_time, '%H:%i') = DATE_FORMAT(#{currentTime}, '%H:%i')
-          AND deleted_at IS NULL
+            AND daily_report_time IS NOT NULL
+            AND DATE_FORMAT(daily_report_time, '%H:%i') = #{currentTime}
+            AND deleted_at IS NULL
     </select>
 
     <select id="getActiveMemberIds" resultType="string">

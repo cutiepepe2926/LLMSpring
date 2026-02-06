@@ -140,7 +140,6 @@ public class DailyReportService {
         try{
             log.info(">>> [Async Start] Generating report for User: {} in Project: {}", userId, projectId);
 
-            // 기존의 리포트 생성 로직 호출 (이미 잘 구현된 메서드 재사용)
             getOrCreateTodayReport(projectId, userId);
 
             log.info(">>> [Async End] Report generated for User: {}", userId);
