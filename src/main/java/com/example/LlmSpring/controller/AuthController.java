@@ -59,4 +59,9 @@ public class AuthController {
 
         return ResponseEntity.status(401).body("Invalid Refresh Token");
     }
+
+    @GetMapping("/validate")
+    public ResponseEntity<?> validate(){
+        return ResponseEntity.ok("Token is valid");
+    }
 }
