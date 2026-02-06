@@ -1,12 +1,9 @@
 package com.example.LlmSpring.controller;
 
 import com.example.LlmSpring.sidebar.SidebarService;
-import com.example.LlmSpring.sidebar.response.ProjectSidebarResponseDTO;
-import com.example.LlmSpring.sidebar.response.SidebarResponseDTO;
-import com.example.LlmSpring.util.JWTService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -14,28 +11,20 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api")
 @CrossOrigin(origins = "*")
 public class SidebarController {
+
     private final SidebarService sidebarService;
-    private final JWTService jWTService;
 
-    //메인 사이드바
+    // 메인 사이드바 조회
     @GetMapping("/sidebar")
-    public ResponseEntity<?> getMainSidebar(@RequestHeader("Authorization") String authHeader) {
-        String token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : null;
-        String userId = jWTService.verifyTokenAndUserId(token);
-        if (userId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-
+    public ResponseEntity<?> getMainSidebar(@AuthenticationPrincipal String userId) {
         return ResponseEntity.ok(sidebarService.getMainSidebar(userId));
     }
 
-    //프로젝트 사이드바
+    // 프로젝트 사이드바 조회
     @GetMapping("/projects/{projectId}/sidebar")
     public ResponseEntity<?> getProjectSidebar(
-            @RequestHeader("Authorization") String authHeader,
+            @AuthenticationPrincipal String userId,
             @PathVariable("projectId") Long projectId) {
-
-        String token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : null;
-        String userId = jWTService.verifyTokenAndUserId(token);
-        if (userId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 
         return ResponseEntity.ok(sidebarService.getProjectSidebar(projectId, userId));
     }
@@ -43,13 +32,8 @@ public class SidebarController {
     // 즐겨찾기 등록/해제 (토글)
     @PostMapping("/projects/{projectId}/favorite")
     public ResponseEntity<?> toggleFavorite(
-            @RequestHeader("Authorization") String authHeader,
+            @AuthenticationPrincipal String userId,
             @PathVariable("projectId") Long projectId) {
-
-        String token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : null;
-        String userId = jWTService.verifyTokenAndUserId(token);
-        if (userId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-
         // 서비스 호출
         boolean isFavorite = sidebarService.toggleFavorite(projectId, userId);
 
