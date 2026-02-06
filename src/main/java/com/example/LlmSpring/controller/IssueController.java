@@ -5,10 +5,10 @@ import com.example.LlmSpring.issue.request.IssueAssigneeRequestDTO;
 import com.example.LlmSpring.issue.request.IssueCreateRequestDTO;
 import com.example.LlmSpring.issue.request.IssueUpdateRequestDTO;
 import com.example.LlmSpring.issue.response.IssueDetailResponseDTO;
-import com.example.LlmSpring.util.JWTService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal; // 추가됨
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -17,26 +17,15 @@ import org.springframework.web.bind.annotation.*;
 public class IssueController {
 
     private final IssueService issueService;
-    private final JWTService jwtService;
-
     /**
      * [이슈 생성 API]
      * POST /api/projects/{projectId}/issues
-     * Authorization 헤더에서 토큰을 추출하여 요청자를 식별합니다.
      */
     @PostMapping
     public ResponseEntity<?> createIssue(
-            @RequestHeader("Authorization") String authHeader,
+            @AuthenticationPrincipal String userId,
             @PathVariable("projectId") int projectId,
             @RequestBody IssueCreateRequestDTO dto) {
-
-        // 1. 토큰에서 유저 ID 추출
-        String token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : authHeader;
-        String userId = jwtService.verifyTokenAndUserId(token);
-
-        if (userId == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("유효하지 않은 토큰입니다.");
-        }
 
         try {
             // 2. 이슈 생성 로직 호출
@@ -54,17 +43,11 @@ public class IssueController {
      */
     @DeleteMapping("/{issueId}")
     public ResponseEntity<?> archiveIssue(
-            @RequestHeader("Authorization") String authHeader,
+            @AuthenticationPrincipal String userId,
             @PathVariable("projectId") int projectId,
             @PathVariable("issueId") int issueId) {
 
-        // 1. 토큰 검증 및 유저 ID 추출
-        String token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : authHeader;
-        String userId = jwtService.verifyTokenAndUserId(token);
 
-        if (userId == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("유효하지 않은 토큰입니다.");
-        }
 
         try {
             // 2. 아카이브 로직 호출
@@ -82,17 +65,10 @@ public class IssueController {
      */
     @PostMapping("/{issueId}/assignees")
     public ResponseEntity<?> addAssignee(
-            @RequestHeader("Authorization") String authHeader,
+            @AuthenticationPrincipal String requesterId,
             @PathVariable("projectId") int projectId,
             @PathVariable("issueId") int issueId,
             @RequestBody IssueAssigneeRequestDTO dto) {
-
-        String token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : authHeader;
-        String requesterId = jwtService.verifyTokenAndUserId(token);
-
-        if (requesterId == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("유효하지 않은 토큰입니다.");
-        }
 
         try {
             issueService.addAssignee(projectId, issueId, requesterId, dto.getUserId());
@@ -108,17 +84,10 @@ public class IssueController {
      */
     @DeleteMapping("/{issueId}/assignees/{userId}")
     public ResponseEntity<?> removeAssignee(
-            @RequestHeader("Authorization") String authHeader,
+            @AuthenticationPrincipal String requesterId,
             @PathVariable("projectId") int projectId,
             @PathVariable("issueId") int issueId,
             @PathVariable("userId") String targetUserId) {
-
-        String token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : authHeader;
-        String requesterId = jwtService.verifyTokenAndUserId(token);
-
-        if (requesterId == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("유효하지 않은 토큰입니다.");
-        }
 
         try {
             issueService.removeAssignee(projectId, issueId, requesterId, targetUserId);
@@ -134,17 +103,10 @@ public class IssueController {
      */
     @PatchMapping("/{issueId}")
     public ResponseEntity<?> updateIssue(
-            @RequestHeader("Authorization") String authHeader,
+            @AuthenticationPrincipal String userId,
             @PathVariable("projectId") int projectId,
             @PathVariable("issueId") int issueId,
             @RequestBody IssueUpdateRequestDTO dto) {
-
-        String token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : authHeader;
-        String userId = jwtService.verifyTokenAndUserId(token);
-
-        if (userId == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("인증이 유효하지 않습니다.");
-        }
 
         try {
             issueService.updateIssue(projectId, issueId, userId, dto);
@@ -154,13 +116,12 @@ public class IssueController {
         }
     }
 
-
     /**
      * [이슈 목록 조회 API]
      * GET /api/projects/{projectId}/issues/
      */
     @GetMapping
-    public ResponseEntity<?> list(@RequestHeader("Authorization") String auth,
+    public ResponseEntity<?> list(@AuthenticationPrincipal String uid,
                                   @PathVariable int projectId,
                                   @RequestParam(required = false) String status,
                                   @RequestParam(required = false) Integer priority,
@@ -170,7 +131,8 @@ public class IssueController {
                                   @RequestParam(required = false) String dueStart,
                                   @RequestParam(required = false) String dueEnd,
                                   @RequestParam(defaultValue = "createdAt_desc") String sort) {
-        String uid = jwtService.verifyTokenAndUserId(auth.replace("Bearer ", ""));
+
+
         return ResponseEntity.ok(issueService.getIssueList(
                 projectId, uid, status, priority, assigneeId,
                 createdStart, createdEnd, dueStart, dueEnd, sort
@@ -183,14 +145,9 @@ public class IssueController {
      */
     @GetMapping("/{issueId}")
     public ResponseEntity<?> getIssueDetail(
-            @RequestHeader("Authorization") String authHeader,
+            @AuthenticationPrincipal String userId,
             @PathVariable("projectId") int projectId,
             @PathVariable("issueId") int issueId) {
-
-        String token = authHeader.replace("Bearer ", "");
-        String userId = jwtService.verifyTokenAndUserId(token);
-
-        if (userId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 
         try {
             IssueDetailResponseDTO response = issueService.getIssueDetail(projectId, issueId, userId);
@@ -200,6 +157,4 @@ public class IssueController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }
     }
-
-
 }

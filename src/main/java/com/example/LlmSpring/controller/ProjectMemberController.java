@@ -5,10 +5,10 @@ import com.example.LlmSpring.projectMember.request.ProjectMemberInviteRequestDTO
 import com.example.LlmSpring.projectMember.request.ProjectMemberRemoveRequestDTO;
 import com.example.LlmSpring.projectMember.request.ProjectMemberRoleRequestDTO;
 import com.example.LlmSpring.projectMember.response.ProjectMemberResponseDTO;
-import com.example.LlmSpring.util.JWTService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal; // 추가됨
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Collections;
@@ -20,29 +20,18 @@ import java.util.List;
 public class ProjectMemberController {
 
     private final ProjectMemberService projectMemberService;
-    private final JWTService jwtService;
 
     /**
      * [프로젝트 참여 멤버 목록 조회 API]
-     * JWT 토큰으로 요청자를 식별하고, 해당 프로젝트의 멤버인 경우에만 목록을 반환합니다.
      * GET /api/projects/{projectId}/members
      */
     @GetMapping("/{projectId}/members")
     public ResponseEntity<?> getProjectMembers(
-            @RequestHeader("Authorization") String authHeader, // 헤더에서 토큰 수신
+            @AuthenticationPrincipal String userId,
             @PathVariable("projectId") int projectId) {
 
         try {
-            // 1. 토큰 추출 및 userId 획득
-            String token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : authHeader;
-            String userId = jwtService.verifyTokenAndUserId(token);
-
-            // 2. 인증 실패 처리
-            if (userId == null) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("유효하지 않거나 만료된 토큰입니다.");
-            }
-
-            // 3. 서비스 호출 (추출된 userId 전달)
+            // 3. 서비스 호출
             List<ProjectMemberResponseDTO> members = projectMemberService.getMemberList(projectId, userId);
 
             // 조회한 멤버 목록 중 '나(userId)'와 일치하는 멤버의 status를 "me"로 변경
@@ -62,26 +51,16 @@ public class ProjectMemberController {
 
     /**
      * [프로젝트 멤버 초대 API]
-     * JWT 토큰으로 요청자가 OWNER인지 확인한 후 새로운 사용자를 초대합니다.
      * POST /api/projects/{projectId}/members/invite
      */
     @PostMapping("/{projectId}/members/invite")
     public ResponseEntity<String> inviteMember(
-            @RequestHeader("Authorization") String authHeader, // 헤더에서 토큰 수신
+            @AuthenticationPrincipal String inviterId,
             @PathVariable("projectId") int projectId,
             @RequestBody ProjectMemberInviteRequestDTO dto) {
 
         try {
-            // 1. 토큰 추출 및 inviterId(초대하는 사람) 획득
-            String token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : authHeader;
-            String inviterId = jwtService.verifyTokenAndUserId(token);
-
-            // 2. 인증 실패 처리
-            if (inviterId == null) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("유효하지 않거나 만료된 토큰입니다.");
-            }
-
-            // 3. 서비스 호출 (추출된 inviterId 전달)
+            // 3. 서비스 호출
             projectMemberService.inviteMember(projectId, inviterId, dto);
             return ResponseEntity.status(HttpStatus.CREATED).body("성공적으로 초대되었습니다.");
 
@@ -93,24 +72,15 @@ public class ProjectMemberController {
 
     /**
      * [프로젝트 멤버 역할 변경 API]
-     * JWT 토큰으로 요청자가 OWNER나 ADMIN인지 확인한 후 멤버의 역할을 변경합니다.
      */
     @PatchMapping("/{projectId}/members/role")
     public ResponseEntity<String> updateMemberRole(
-            @RequestHeader("Authorization") String authHeader, // 헤더로 변경
+            @AuthenticationPrincipal String requesterId,
             @PathVariable("projectId") int projectId,
             @RequestBody ProjectMemberRoleRequestDTO dto) {
 
         try {
-            // 1. 토큰 추출 및 requesterId 획득
-            String token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : authHeader;
-            String requesterId = jwtService.verifyTokenAndUserId(token);
-
-            if (requesterId == null) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("유효하지 않거나 만료된 토큰입니다.");
-            }
-
-            // 2. 서비스 호출 (추출된 requesterId 전달)
+            // 2. 서비스 호출
             projectMemberService.updateMemberRole(projectId, requesterId, dto);
             return ResponseEntity.ok("멤버의 역할이 성공적으로 변경되었습니다.");
         } catch (RuntimeException e) {
@@ -120,24 +90,15 @@ public class ProjectMemberController {
 
     /**
      * [멤버 제거 API (추방, 나가기, 초대취소)]
-     * JWT 토큰으로 본인 확인 및 권한 확인 후 멤버를 프로젝트에서 제거합니다.
      */
     @PostMapping("/{projectId}/members/remove")
     public ResponseEntity<String> removeMember(
-            @RequestHeader("Authorization") String authHeader, // 헤더로 변경
+            @AuthenticationPrincipal String userId,
             @PathVariable("projectId") int projectId,
             @RequestBody ProjectMemberRemoveRequestDTO dto) {
 
         try {
-            // 1. 토큰 추출 및 userId 획득
-            String token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : authHeader;
-            String userId = jwtService.verifyTokenAndUserId(token);
-
-            if (userId == null) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("유효하지 않거나 만료된 토큰입니다.");
-            }
-
-            // 2. 서비스 호출 (추출된 userId 전달)
+            // 2. 서비스 호출
             projectMemberService.removeMember(projectId, userId, dto);
             String message = dto.getAction() + " 처리가 완료되었습니다.";
             return ResponseEntity.ok(message);
@@ -148,19 +109,10 @@ public class ProjectMemberController {
 
     @PostMapping("/{projectId}/accept")
     public ResponseEntity<?> acceptInvitation(
-            @RequestHeader("Authorization") String authHeader,
+            @AuthenticationPrincipal String userId,
             @PathVariable("projectId") int projectId
     ){
         try{
-            String token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : authHeader;
-            String userId = jwtService.verifyTokenAndUserId(token);
-
-            if(userId == null){
-                // 에러 메시지도 JSON으로 맞추려면 Map 사용 권장
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Collections.singletonMap("error", "유효하지 않거나 만료된 토큰입니다"));
-            }
-
             System.out.println("컨트롤러 진입: " + userId + ", 프로젝트 아이디: " + projectId);
 
             projectMemberService.acceptInvitation(projectId, userId);
@@ -173,18 +125,10 @@ public class ProjectMemberController {
 
     @PostMapping("/{projectId}/decline")
     public ResponseEntity<?> declineInvitation(
-            @RequestHeader("Authorization") String authHeader,
+            @AuthenticationPrincipal String userId,
             @PathVariable("projectId") int projectId
     ) {
         try {
-            String token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : authHeader;
-            String userId = jwtService.verifyTokenAndUserId(token);
-
-            if (userId == null) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Collections.singletonMap("error", "유효하지 않거나 만료된 토큰입니다"));
-            }
-
             projectMemberService.declineInvitation(projectId, userId);
 
             // JSON 응답 반환
@@ -202,16 +146,11 @@ public class ProjectMemberController {
      */
     @GetMapping("/{projectId}/members/assignees")
     public ResponseEntity<?> getIssueAssigneeMembers(
-            @RequestHeader("Authorization") String authHeader,
+            @AuthenticationPrincipal String userId,
             @PathVariable("projectId") int projectId) {
-
-        String token = authHeader.replace("Bearer ", "");
-        String userId = jwtService.verifyTokenAndUserId(token);
-
-        // 새로운 서비스 메서드 호출
+        // 서비스 호출
         List<ProjectMemberResponseDTO> members = projectMemberService.getIssueAssigneeMemberList(projectId, userId);
 
         return ResponseEntity.ok(members);
     }
-
 }
