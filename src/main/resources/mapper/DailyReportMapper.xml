@@ -75,24 +75,6 @@
         WHERE project_id = #{projectId}
     </select>
 
-    <insert id="insertChatLog">
-        INSERT INTO DailyReportChatLog (role, message, report_id, suggestion_content, is_applied)
-        VALUES (#{role}, #{message}, #{reportId}, #{suggestionContent}, #{isApplied})
-    </insert>
-
-    <select id="selectChatLogs" resultType="com.example.LlmSpring.report.dailyreport.DailyReportChatLogVO">
-        SELECT * FROM DailyReportChatLog
-        WHERE report_id = #{reportId}
-        ORDER BY created_at ASC
-    </select>
-
-    <select id="selectChatLogsPaging" resultType="com.example.LlmSpring.report.dailyreport.DailyReportChatLogVO">
-        SELECT * FROM DailyReportChatLog
-        WHERE report_id = #{reportId}
-        ORDER BY created_at ASC
-            LIMIT #{limit} OFFSET #{offset}
-    </select>
-
     <select id="selectUserName" resultType="String">
         SELECT name FROM User WHERE user_id = #{userId}
     </select>

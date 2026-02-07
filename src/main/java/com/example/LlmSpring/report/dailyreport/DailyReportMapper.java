@@ -34,15 +34,6 @@ public interface DailyReportMapper {
     //7. 프로젝트 기여도 통계 조회
     Map<String, Object> selectProjectStats(@Param("projectId") Long projectId, @Param("period") String period);
 
-    //8. 채팅 로그 저장
-    void insertChatLog(DailyReportChatLogVO vo);
-
-    //9. 채팅 로그 전체 조회
-    List<DailyReportChatLogVO> selectChatLogs(@Param("reportId") Long reportId);
-
-    //10. 채팅 로그 페이징 조회
-    List<DailyReportChatLogVO> selectChatLogsPaging(@Param("reportId") Long reportId, @Param("offset") int offset, @Param("limit") int limit);
-
     //11. 작성자 이름 조회
     String selectUserName(@Param("userId") String userId);
 

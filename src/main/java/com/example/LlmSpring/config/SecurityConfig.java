@@ -34,7 +34,7 @@ public class SecurityConfig {
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable())
                 .authorizeHttpRequests(auth -> auth
-                        // 대소문자 주의: 컨트롤러와 일치시킬 것 (지난번 수정 사항)
+                        .requestMatchers("/error").permitAll()
                         .requestMatchers("/api/auth/logIn", "/api/auth/signUp", "/api/auth/reissue").permitAll()
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().authenticated()

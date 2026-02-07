@@ -104,9 +104,6 @@ public class DailyReportService {
         DailyReportResponseDTO dto = convertToDTO(vo);
         String textContent = fetchContentFromS3(vo.getContent());
         dto.setContent(textContent);
-
-        List<DailyReportChatLogVO> chatLogs = dailyReportMapper.selectChatLogs(reportId);
-        dto.setChatLogs(chatLogs);
         return dto;
     }
 
@@ -194,26 +191,8 @@ public class DailyReportService {
         return getReportDetail(reportId);
     }
 
-    public List<Map<String, Object>> getChatLogs(Long reportId, int page, int size) {
-        List<DailyReportChatLogVO> logs = dailyReportMapper.selectChatLogsPaging(reportId, page * size, size);
-        List<Map<String, Object>> result = new ArrayList<>();
-        for (DailyReportChatLogVO log : logs) {
-            Map<String, Object> map = new HashMap<>();
-            map.put("role", log.getRole());
-            map.put("message", log.getMessage());
-            result.add(map);
-        }
-        return result;
-    }
-
     @Transactional
     public Map<String, Object> sendChatToAI(Long reportId, String message, String currentContent) {
-        DailyReportChatLogVO userLog = new DailyReportChatLogVO();
-        userLog.setReportId(reportId);
-        userLog.setRole(true);
-        userLog.setMessage(message);
-        dailyReportMapper.insertChatLog(userLog);
-
         String prompt = String.format("""
             당신은 개발자의 일일 리포트 작성을 돕는 AI 조수입니다.
             [현재 리포트 내용]
@@ -225,25 +204,9 @@ public class DailyReportService {
 
         String aiReplyText = callGeminiApi(prompt);
 
-        DailyReportChatLogVO aiLog = new DailyReportChatLogVO();
-        aiLog.setReportId(reportId);
-        aiLog.setRole(false);
-        aiLog.setMessage(aiReplyText);
-        aiLog.setIsApplied(false);
-        dailyReportMapper.insertChatLog(aiLog);
-
         Map<String, Object> response = new HashMap<>();
         response.put("reply", aiReplyText);
         return response;
-    }
-
-    public void saveSuggestionLog(Long reportId, String suggestion, boolean isApplied) {
-        DailyReportChatLogVO log = new DailyReportChatLogVO();
-        log.setReportId(reportId);
-        log.setRole(false);
-        log.setSuggestionContent(suggestion);
-        log.setIsApplied(isApplied);
-        dailyReportMapper.insertChatLog(log);
     }
 
     public Map<String, Object> getReportSettings(Long projectId) {

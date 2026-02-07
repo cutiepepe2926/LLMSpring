@@ -21,7 +21,6 @@ public class DailyReportResponseDTO {
     private String writerName;
     private String userId;
     private String role;
-    private List<DailyReportChatLogVO> chatLogs;
 
     public DailyReportResponseDTO(DailyReportVO vo, String writerName) {
         this.reportId = vo.getReportId();

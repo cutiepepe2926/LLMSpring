@@ -54,7 +54,7 @@ public class ReportController {
     }
 
     // 3. 리포트 수정 (임시 저장)
-    @PutMapping("/{reportId}")
+    @PutMapping("/daily-reports/{reportId}")
     public ResponseEntity<String> updateReport(@PathVariable Long reportId, @RequestBody Map<String, String> body) {
 
         String content = body.get("content");
@@ -116,14 +116,6 @@ public class ReportController {
         return ResponseEntity.ok(dailyReportService.regenerateReport(reportId));
     }
 
-    // 8. AI 채팅 기록 조회
-    @GetMapping("/daily-reports/{reportId}/chat-logs")
-    public ResponseEntity<List<Map<String, Object>>> getChatLogs(
-            @PathVariable Long reportId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(dailyReportService.getChatLogs(reportId, page, size));
-    }
 
     // 9. AI 채팅 전송
     @PostMapping("/daily-reports/{reportId}/chat")
@@ -131,12 +123,6 @@ public class ReportController {
         return ResponseEntity.ok(dailyReportService.sendChatToAI(reportId, body.get("message"), body.get("current_content")));
     }
 
-    // 10. AI 제안 적용 로그 저장
-    @PostMapping("/daily-reports/{reportId}/apply")
-    public ResponseEntity<String> applySuggestion(@PathVariable Long reportId, @RequestBody Map<String, Object> body) {
-        dailyReportService.saveSuggestionLog(reportId, (String) body.get("suggestion_content"), (Boolean) body.get("is_applied"));
-        return ResponseEntity.ok("Applied log saved");
-    }
 
     // 11. 리포트 설정 조회
     @GetMapping("/report-settings")
