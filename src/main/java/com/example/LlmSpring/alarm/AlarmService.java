@@ -12,6 +12,8 @@ public interface AlarmService {
 
     // 이슈 할당 알림
     void sendIssueAssignAlarm(String senderId, String receiverId, int projectId, int issueId, String issueTitle);
+    void sendIssueChatAlarm(String senderId, List<String> receiverIds, int projectId, int issueId);
+    void sendIssueUnassignAlarm(String senderId, String receiverId, int projectId, int issueId, String issueTitle);
 
     List<AlarmVO> getMyAlarms(String userId);
     void markAsRead(int alarmId);

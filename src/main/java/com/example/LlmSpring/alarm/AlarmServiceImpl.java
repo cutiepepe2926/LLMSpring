@@ -112,14 +112,83 @@ public class AlarmServiceImpl implements AlarmService {
                 .userId(receiverId)      // 받는 사람
                 .senderId(senderId)      // 보낸 사람
                 .projectId(projectId)
-                .type("TASK_ASSIGN")     // 알림 타입
+                .type("ISSUE_ASSIGN")     // 알림 타입
                 .referenceId(issueId)    // 참조 ID (이슈 ID)
                 .content(content)
                 .url(url)
                 .isRead(false)
                 .build();
 
-        alarmMapper.insertAlarm(alarm);
+        createAlarm(alarm);
+    }
+
+    @Override
+    @Transactional
+    public void sendIssueUnassignAlarm(String senderId, String receiverId, int projectId, int issueId, String issueTitle) {
+        // 1. 자기 자신이 스스로 해제한 경우 알림 생략 (선택 사항)
+        if (senderId.equals(receiverId)) {
+            return;
+        }
+
+        // 2. 정보 조회
+        String senderName = userMapper.getUserName(senderId);
+        if (senderName == null || senderName.isEmpty()) return;
+
+        String projectName = projectMapper.getProjectName(projectId);
+
+        // 3. 메시지 생성: "OOO님이 '제목' 이슈 담당자에서 해제했습니다."
+        String content = String.format("[%s] %s님이 '%s' 이슈 담당자에서 해제했습니다.",
+                projectName, senderName, issueTitle);
+
+        // 4. URL 생성 (클릭 시 해당 이슈 상세 보기)
+        String url = String.format("/project/%d/dashboard?tab=ISSUE&issueId=%d", projectId, issueId);
+
+        // 5. 알림 객체 생성
+        AlarmVO alarm = AlarmVO.builder()
+                .userId(receiverId)      // 받는 사람 (해제된 담당자)
+                .senderId(senderId)      // 보낸 사람 (해제한 사람)
+                .projectId(projectId)
+                .type("ISSUE_UNASSIGN")   // 알림 타입 (프론트 아이콘 처리에 활용)
+                .referenceId(issueId)
+                .content(content)
+                .url(url)
+                .isRead(false)
+                .build();
+
+        // 6. 실시간 전송 (createAlarm 메서드 재사용)
+        createAlarm(alarm);
+    }
+
+    @Override
+    @Transactional
+    public void sendIssueChatAlarm(String senderId, List<String> receiverIds, int projectId, int issueId) {
+        if (receiverIds == null || receiverIds.isEmpty()) return;
+
+        String senderName = userMapper.getUserName(senderId);
+        String projectName = projectMapper.getProjectName(projectId);
+
+        // 이슈 제목 조회 (선택 사항: 이슈 제목까지 보여주려면 IssueMapper 필요하지만, 여기서는 단순화)
+        // String issueTitle = issueMapper.getIssueTitle(issueId);
+
+        String content = String.format("[%s] %s님이 이슈에 댓글을 남겼습니다.", projectName, senderName);
+        String url = String.format("/project/%d/dashboard?tab=ISSUE&issueId=%d", projectId, issueId);
+
+        for (String receiverId : receiverIds) {
+            if (receiverId.equals(senderId)) continue; // 자기 자신 제외
+
+            AlarmVO alarm = AlarmVO.builder()
+                    .userId(receiverId)
+                    .senderId(senderId)
+                    .projectId(projectId)
+                    .type("ISSUE_CHAT") // 새로운 타입 정의 필요 (프론트 아이콘 처리 등)
+                    .referenceId(issueId)
+                    .content(content)
+                    .url(url)
+                    .isRead(false)
+                    .build();
+
+            createAlarm(alarm);
+        }
     }
 
     @Override

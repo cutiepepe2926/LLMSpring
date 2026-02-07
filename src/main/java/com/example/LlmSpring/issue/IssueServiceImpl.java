@@ -258,6 +258,14 @@ public class IssueServiceImpl implements IssueService {
         // 6. 담당자 제거 실행
         issueMapper.deleteAssignee(issueId, targetUserId);
 
+        alarmService.sendIssueUnassignAlarm(
+                requesterId,
+                targetUserId,
+                projectId,
+                issueId,
+                issue.getTitle()
+        );
+
         // 7. 상태 회귀 로직: 남은 담당자가 0명인 경우 UNASSIGNED로 변경
         int count = issueMapper.countAssigneesByIssueId(issueId);
         IssueVO updatedIssue = issueMapper.selectIssueById(issueId);
