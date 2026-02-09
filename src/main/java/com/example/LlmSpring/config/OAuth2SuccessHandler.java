@@ -16,7 +16,7 @@ import org.springframework.security.oauth2.client.authentication.OAuth2Authentic
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
-
+import org.springframework.beans.factory.annotation.Value;
 import java.io.IOException;
 
 @Component
@@ -29,6 +29,9 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
     @Autowired
     private EncryptionUtil encryptionUtil;
+
+    @Value("${app.frontend.url}")
+    private String frontendUrl;
 
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
         // 1. Github 에서 넘어온 정보 추출
@@ -107,7 +110,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
         // 6. 프론트엔드 마이페이지로 복귀 (if문 밖으로 빼야 함)
         // 쿠키가 null이어도 리다이렉트는 되어야 하므로 밖으로 이동했습니다.
-        response.sendRedirect("http://localhost:3000/myPage");
+        response.sendRedirect(frontendUrl + "/myPage");
     }
 
     @Override
