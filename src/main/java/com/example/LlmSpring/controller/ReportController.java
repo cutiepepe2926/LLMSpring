@@ -238,7 +238,7 @@ public class ReportController {
 
     // 13. 최종 리포트 생성
     @PostMapping("/final-reports")
-    public ResponseEntity<Map<String, String>> createFinalReport(
+    public ResponseEntity<Map<String, Object>> createFinalReport(
             @AuthenticationPrincipal String userId,
             @PathVariable Long projectId,
             @RequestBody Map<String, Object> body) {
@@ -249,20 +249,18 @@ public class ReportController {
         // 2. 리포트 타입 추출
         String reportType = (String) body.get("reportType");
 
-        // 3. 섹션 리스트 안전하게 추출
+        // 3. 섹션 리스트 추출
         List<String> selectedSections = new ArrayList<>();
-
         if (body.get("selectedSections") instanceof List<?>) {
             for (Object obj : (List<?>) body.get("selectedSections")) {
                 selectedSections.add(obj.toString());
             }
         }
 
-        // 4. Service 호출
-        String content = finalReportService.getOrCreateFinalReport(projectId, reportType, selectedSections, userId);
+        // 4. Service 호출 (이제 Map을 반환함)
+        Map<String, Object> response = finalReportService.getOrCreateFinalReport(projectId, reportType, selectedSections, userId);
 
-        Map<String, String> response = new HashMap<>();
-        response.put("content", content);
+        // Service에서 받은 Map(ID, Title, Content 포함)을 그대로 반환
         return ResponseEntity.ok(response);
     }
 

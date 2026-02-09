@@ -34,43 +34,44 @@ public class FinalReportServiceImpl implements FinalReportService {
 
     @Override
     @Transactional
-    public String getOrCreateFinalReport(Long projectId, String reportType, List<String> selectedSections, String userId) {
+    public Map<String, Object> getOrCreateFinalReport(Long projectId, String reportType, List<String> selectedSections, String userId) {
         checkReportLimit(projectId, userId);
 
-        // 1. 데이터 수집 (일일 리포트 모음)
+        // 1. 데이터 수집
         String aggregatedContent = collectAllDailyReports(projectId);
 
-        // 2. 동적 프롬프트 생성
+        // 2. 동적 프롬프트 생성 & 3. AI 호출
         String prompt = buildDynamicPrompt(reportType, selectedSections, aggregatedContent);
-
-        // 3. AI 호출
         String generatedContent = callGemini(prompt);
 
-        //  S3 파일명 생성 전략 적용
-        // 포맷: finalReport/FinalReport_P{projectId}_U{userId}_{yyyyMMddHHmmss}.md
-        // 예: finalReport/FinalReport_P10_Uuser123_20260203153000.md
+        // 4. S3 업로드
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
         String s3FileName = String.format("finalReport/FinalReport_P%d_U%s_%s.md", projectId, userId, timestamp);
-
-        // 4. S3 업로드
         String s3Url = s3Service.uploadTextContent(s3FileName, generatedContent);
 
         // 5. DB 저장
         FinalReportVO vo = new FinalReportVO();
         vo.setProjectId(projectId);
 
-        // [수정 3] 제목 자동 생성: "리포트타입 (날짜 시간)" 형태
+        // 제목 생성 로직
         String displayDate = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
         String baseTitle = generateTitle(reportType);
-        vo.setTitle(baseTitle + " (" + displayDate + ")");
+        vo.setTitle(baseTitle + " (" + displayDate + ")"); // 예: 개발자 포트폴리오 (2026-02-09 15:30)
 
         vo.setContent(s3Url);
         vo.setStatus("DRAFT");
         vo.setCreatedBy(userId);
 
         finalReportMapper.insertFinalReport(vo);
+        // MyBatis의 useGeneratedKeys 덕분에 vo.getFinalReportId()에 ID가 채워져 있음
 
-        return generatedContent;
+        // [수정] 결과 맵 생성 및 반환
+        Map<String, Object> result = new HashMap<>();
+        result.put("finalReportId", vo.getFinalReportId()); // 핵심: ID 반환
+        result.put("title", vo.getTitle());                 // 핵심: 생성된 제목 반환
+        result.put("content", generatedContent);            // 에디터 표시용 텍스트 반환
+
+        return result;
     }
 
     @Override
