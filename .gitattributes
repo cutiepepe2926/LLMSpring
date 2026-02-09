@@ -1,0 +1,20 @@
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+out/
+
+### Gradle ###
+.gradle
+build/
+
+### Java ###
+*.class
+
+### OS Specific (Mac, Windows) ###
+.DS_Store
+Thumbs.db
+
+### Secrets (선택사항: 실수로 비밀번호 올리는 것 방지하려면 추가) ###
+# application.properties
