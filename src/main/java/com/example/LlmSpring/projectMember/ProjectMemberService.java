@@ -53,4 +53,7 @@ public interface ProjectMemberService {
 
     // 6. 초대 거절
     void declineInvitation(int projectId, String userId);
+
+    // 7. 즐겨 찾기
+    void toggleFavorite(Long projectId, String userId);
 }

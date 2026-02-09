@@ -111,7 +111,8 @@ public class TaskService {
         taskMapper.insertCheckList(vo);
 
         insertLog(taskId, "CHECKLIST", "체크리스트 [" + content + "] 항목을 추가했습니다.", userId);
-        sendChecklistAlarm(taskId, userId);
+
+        sendChecklistAlarm(taskId, userId, "CHECKLIST_ADD");
     }
 
     // 체크리스트 삭제
@@ -122,7 +123,8 @@ public class TaskService {
 
         taskMapper.deleteCheckList(checklistId);
         insertLog(taskId, "CHECKLIST", "체크리스트 [" + content + "] 항목을 삭제했습니다.", userId);
-        sendChecklistAlarm(taskId, userId);
+
+        sendChecklistAlarm(taskId, userId, "CHECKLIST_DELETE");
     }
 
     // 체크리스트 상태 변경
@@ -134,15 +136,25 @@ public class TaskService {
         taskMapper.updateCheckListStatus(checklistId, isDone);
         String action = isDone ? "완료" : "미완료";
         insertLog(taskId, "CHECKLIST", "체크리스트 [" + content + "] 항목을 " + action + " 처리했습니다.", userId);
-        sendChecklistAlarm(taskId, userId);
+
+        String alarmType = isDone ? "CHECKLIST_DONE" : "CHECKLIST_UNDONE";
+        sendChecklistAlarm(taskId, userId, alarmType);
     }
 
     // 공통 알람 발송 메서드
-    private void sendChecklistAlarm(Long taskId, String senderId) {
+    private void sendChecklistAlarm(Long taskId, String senderId, String type) {
         TaskVO task = taskMapper.selectTaskById(taskId);
         if (task == null) return;
         List<String> assignees = taskMapper.selectTaskUsers(taskId);
-        alarmService.sendTaskAlarm(senderId, assignees, task.getProjectId().intValue(), taskId, task.getTitle(), "CHECKLIST");
+
+        alarmService.sendTaskAlarm(
+                senderId,
+                assignees,
+                task.getProjectId().intValue(),
+                taskId,
+                task.getTitle(),
+                type
+        );
     }
 
     @Transactional

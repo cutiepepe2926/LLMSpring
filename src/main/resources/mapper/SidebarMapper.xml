@@ -11,11 +11,13 @@
             p.status AS status,
             p.start_date AS startDate,
             p.end_date AS endDate,
-            pm.is_favorite AS isFavorite  FROM Project p
-                                                   JOIN ProjectMember pm ON p.project_id = pm.project_id
+            pm.is_favorite AS isFavorite
+        FROM Project p
+                 JOIN ProjectMember pm ON p.project_id = pm.project_id
         WHERE pm.user_id = #{userId}
           AND p.deleted_at IS NULL
           AND pm.deleted_at IS NULL
+          AND p.status = 'ACTIVE'
         ORDER BY pm.is_favorite DESC, p.name ASC
     </select>
 
@@ -44,8 +46,9 @@
             t.title AS title,
             t.priority AS priority,
             t.due_date AS dueDate,
-            t.status AS status        FROM Task t
-                                               LEFT JOIN TaskUser tu ON t.task_id = tu.task_id
+            t.status AS status
+        FROM Task t
+                 LEFT JOIN TaskUser tu ON t.task_id = tu.task_id
         WHERE t.project_id = #{projectId}
           AND t.deleted_at IS NULL
           AND t.status != 'DONE'
@@ -70,25 +73,15 @@
           AND ia.user_id = #{userId}
           AND i.status != 'DONE'
           AND i.archived_at IS NULL
-        ORDER BY i.priority ASC, i.due_date ASC  LIMIT 5
+        ORDER BY i.priority ASC, i.due_date ASC
+            LIMIT 5
     </select>
 
-    <select id="existsFavorite" resultType="int">
-        SELECT COUNT(*)
-        FROM ProjectMember
+    <update id="updateFavorite">
+        UPDATE ProjectMember
+        SET is_favorite = NOT is_favorite
         WHERE project_id = #{projectId}
           AND user_id = #{userId}
-          AND is_favorite = 1  </select>
-
-    <update id="insertFavorite">
-        UPDATE ProjectMember
-        SET is_favorite = 1    WHERE project_id = #{projectId}
-                                 AND user_id = #{userId}
     </update>
 
-    <update id="deleteFavorite">
-        UPDATE ProjectMember
-        SET is_favorite = 0    WHERE project_id = #{projectId}
-                                 AND user_id = #{userId}
-    </update>
 </mapper>

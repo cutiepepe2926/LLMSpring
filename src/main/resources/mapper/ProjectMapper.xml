@@ -343,4 +343,11 @@
           AND DATEDIFF(CURDATE(), DATE(deleted_at)) = 7
     </select>
 
+    <!-- 13. 프로젝트 즐겨 찾기 조회   -->
+    <update id="updateFavorite">
+        UPDATE ProjectMember
+        SET is_favorite = NOT is_favorite
+        WHERE project_id = #{projectId} AND user_id = #{userId}
+    </update>
+
 </mapper>

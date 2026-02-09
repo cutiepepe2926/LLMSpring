@@ -29,12 +29,5 @@ public interface SidebarMapper {
     );
 
     // 즐겨찾기 관련 메서드
-    // 1. 이미 즐겨찾기 되어있는지 확인
-    int existsFavorite(@Param("projectId") Long projectId, @Param("userId") String userId);
-
-    // 2. 즐겨찾기 추가
-    void insertFavorite(@Param("projectId") Long projectId, @Param("userId") String userId);
-
-    // 3. 즐겨찾기 해제
-    void deleteFavorite(@Param("projectId") Long projectId, @Param("userId") String userId);
+    void updateFavorite(@Param("projectId") Long projectId, @Param("userId") String userId);
 }

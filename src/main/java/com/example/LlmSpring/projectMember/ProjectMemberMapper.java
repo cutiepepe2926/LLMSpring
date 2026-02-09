@@ -47,4 +47,7 @@ public interface ProjectMemberMapper {
 
     // 이슈 담당자용: ACTIVE 멤버만 조회
     List<ProjectMemberResponseDTO> selectActiveMembersByProjectId(@Param("projectId") int projectId);
+
+    // 즐겨찾기 토글
+    void updateFavorite(@Param("projectId") Long projectId, @Param("userId") String userId);
 }

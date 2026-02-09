@@ -65,17 +65,8 @@ public class SidebarService {
     //즐겨찾기
     @Transactional
     public boolean toggleFavorite(Long projectId, String userId) {
-        // 1. 이미 즐겨찾기인지 확인
-        int count = sidebarMapper.existsFavorite(projectId, userId);
+        sidebarMapper.updateFavorite(projectId, userId);
 
-        if (count > 0) {
-            // 이미 있으면 -> 삭제 (해제)
-            sidebarMapper.deleteFavorite(projectId, userId);
-            return false; // 결과: 즐겨찾기 아님(false)
-        } else {
-            // 없으면 -> 추가 (등록)
-            sidebarMapper.insertFavorite(projectId, userId);
-            return true; // 결과: 즐겨찾기 됨(true)
-        }
+        return true;
     }
 }

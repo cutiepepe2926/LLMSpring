@@ -279,8 +279,17 @@ public class AlarmServiceImpl implements AlarmService {
                 content = String.format("[%s] %s님이 업무 '%s'를 삭제했습니다.", projectName, senderName, taskTitle);
                 url = String.format("/projectDetail/%d", projectId);
                 break;
-            case "CHECKLIST":
-                content = String.format("[%s] %s님이 업무 '%s'에 체크리스트를 추가하였습니다.", projectName, senderName, taskTitle);
+            case "CHECKLIST_ADD":
+                content = String.format("[%s] %s님이 업무 '%s'에 새 체크리스트를 추가했습니다.", projectName, senderName, taskTitle);
+                break;
+            case "CHECKLIST_DELETE":
+                content = String.format("[%s] %s님이 업무 '%s'의 체크리스트 항목을 삭제했습니다.", projectName, senderName, taskTitle);
+                break;
+            case "CHECKLIST_DONE":
+                content = String.format("[%s] %s님이 업무 '%s'의 체크리스트를 완료했습니다.", projectName, senderName, taskTitle);
+                break;
+            case "CHECKLIST_UNDONE":
+                content = String.format("[%s] %s님이 업무 '%s'의 체크리스트 완료를 취소했습니다.", projectName, senderName, taskTitle);
                 break;
             case "CHAT":
                 content = String.format("[%s] %s님이 업무 '%s'에 댓글을 남겼습니다.", projectName, senderName, taskTitle);

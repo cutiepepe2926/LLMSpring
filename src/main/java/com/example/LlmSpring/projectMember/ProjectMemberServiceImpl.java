@@ -272,4 +272,11 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
         return members;
     }
 
+    // 즐겨찾기
+    @Override
+    @Transactional
+    public void toggleFavorite(Long projectId, String userId) {
+        projectMemberMapper.updateFavorite(projectId, userId);
+    }
+
 }
