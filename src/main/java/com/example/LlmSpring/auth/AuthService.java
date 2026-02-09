@@ -22,12 +22,12 @@ public class AuthService {
 
     @Transactional
     public SignUpResponseDTO signUp(SignupRequestDTO req){
-        if(userMapper.existsByEmail(req.getEmail())){
-            return SignUpResponseDTO.fail("DUP_EMAIL", "이미 사용 중인 이메일입니다");
-        }
-
         if(userMapper.existsByUserId(req.getUserId())){
             return SignUpResponseDTO.fail("DUP_USERID", "이미 사용 중인 아이디입니다.");
+        }
+
+        if(userMapper.existsByEmail(req.getEmail())){
+            return SignUpResponseDTO.fail("DUP_EMAIL", "이미 사용 중인 이메일입니다");
         }
 
         String hashed = BCrypt.hashpw(req.getPassword(), BCrypt.gensalt());
