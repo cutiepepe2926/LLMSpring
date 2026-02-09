@@ -46,18 +46,18 @@ public class AlarmServiceImpl implements AlarmService {
 
     @Override
     @Transactional
-    public void createAlarm(String userId, String content, String type, String url) {
+    public void sendDailyReportAlarm(String userId, int projectId, String content) {
+        String url = String.format("/project/%d/dashboard", projectId);
+
         AlarmVO alarm = AlarmVO.builder()
                 .userId(userId)
+                .projectId(projectId)
+                .type("DAILY_REPORT")
                 .content(content)
-                .type(type)
                 .url(url)
                 .isRead(false)
-                // senderId, projectId, referenceId는 null 또는 0으로 들어감
-                // DB 제약조건에 따라 필요하다면 파라미터를 추가해야 함
                 .build();
 
-        // 기존 메서드 재사용
         createAlarm(alarm);
     }
 

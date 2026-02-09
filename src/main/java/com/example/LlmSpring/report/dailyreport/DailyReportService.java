@@ -318,10 +318,9 @@ public class DailyReportService {
             String projectName = (project != null) ? project.getName() : "프로젝트";
 
             String alarmContent = "[" + projectName + "] 의 일일 리포트가 생성되었습니다.";
-            String targetUrl = "/project/" + projectId + "/dashboard";
 
             // 알림 전송
-            alarmService.createAlarm(userId, alarmContent, "DAILY_REPORT", targetUrl);
+            alarmService.sendDailyReportAlarm(userId, projectId.intValue(), alarmContent);
 
             log.info(">>> [Async End] Report generated and Alarm sent for User: {}", userId);
 

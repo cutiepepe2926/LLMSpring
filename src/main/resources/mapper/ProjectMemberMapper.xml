@@ -89,12 +89,12 @@
 
     <select id="selectMemberStatus" resultType="string">
         SELECT status
-        FROM projectmember
+        FROM ProjectMember
         WHERE project_id = #{projectId} AND user_id = #{userId}
     </select>
 
     <update id="updateMemberStatus">
-        UPDATE projectmember
+        UPDATE ProjectMember
         SET status = #{status}
         <if test="status == 'ACTIVE'">
             , joined_at = NOW()  </if>
@@ -103,7 +103,7 @@
     </update>
 
     <update id="declineInvitation">
-        UPDATE projectmember
+        UPDATE ProjectMember
         SET deleted_at = NOW()
         WHERE project_id = #{projectId}
           AND user_id = #{userId}
