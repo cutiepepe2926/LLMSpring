@@ -38,13 +38,13 @@
     </insert>
 
     <update id="updateFinalReport">
-        UPDATE finalreport
+        UPDATE FinalReport
         SET title = #{title},
             content = #{content},
             created_at = NOW() WHERE final_report_id = #{finalReportId}
     </update>
 
     <delete id="deleteFinalReport">
-        DELETE FROM finalreport WHERE final_report_id = #{finalReportId}
+        DELETE FROM FinalReport WHERE final_report_id = #{finalReportId}
     </delete>
 </mapper>

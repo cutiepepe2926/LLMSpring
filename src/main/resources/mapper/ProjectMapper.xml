@@ -255,7 +255,7 @@
     <select id="getProjectName" resultType="string">
         SELECT
             name
-        FROM project
+        FROM Project
         WHERE project_id = #{projectId}
     </select>
 
