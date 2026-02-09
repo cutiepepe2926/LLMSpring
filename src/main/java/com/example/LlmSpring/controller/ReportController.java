@@ -69,15 +69,20 @@ public class ReportController {
     }
 
     // 3. 리포트 수정 (임시 저장)
-    @PutMapping("/daily-reports/{reportId}")
     public ResponseEntity<String> updateReport(
             @AuthenticationPrincipal String userId,
             @PathVariable Long projectId,
             @PathVariable Long reportId,
             @RequestBody Map<String, String> body) {
 
-        // [리포트 권한]
+        // 1. 프로젝트 권한 확인
         projectAccessService.validateReportAccess(projectId, userId);
+
+        // 2. 리포트 소유자 확인 (추가된 로직)
+        DailyReportResponseDTO report = dailyReportService.getReportDetail(reportId);
+        if (!report.getUserId().equals(userId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("본인의 리포트만 수정할 수 있습니다.");
+        }
 
         String content = body.get("content");
         String title = body.get("title");
@@ -108,7 +113,14 @@ public class ReportController {
         String summary = (String) body.get("summary");
         Integer commitCount = body.get("commitCount") != null ? Integer.parseInt(body.get("commitCount").toString()) : 0;
 
+        // 본인의 오늘 리포트를 가져오거나 생성
         DailyReportResponseDTO res = dailyReportService.getOrCreateTodayReport(projectId, userId);
+
+        // [추가된 검증 로직] 가져온 리포트가 실제 본인 소유인지 재확인 (방어적 코드)
+        if (!res.getUserId().equals(userId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("message", "본인의 리포트만 수정할 수 있습니다."));
+        }
 
         dailyReportService.updateReport(res.getReportId(), content, dateStr + " 리포트", summary, commitCount);
 
@@ -116,14 +128,18 @@ public class ReportController {
     }
 
     // 4. 리포트 발행 (완료 처리)
-    @PatchMapping("/{reportId}/publish")
     public ResponseEntity<String> publishReport(
             @AuthenticationPrincipal String userId,
             @PathVariable Long projectId,
             @PathVariable Long reportId) {
 
-        // [리포트 권한]
         projectAccessService.validateReportAccess(projectId, userId);
+
+        // 소유자 확인
+        DailyReportResponseDTO report = dailyReportService.getReportDetail(reportId);
+        if (!report.getUserId().equals(userId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("본인의 리포트만 발행할 수 있습니다.");
+        }
 
         dailyReportService.publishReport(reportId);
         return ResponseEntity.ok("Published successfully");
@@ -157,13 +173,18 @@ public class ReportController {
 
     // 7. 리포트 수동 재생성
     @PostMapping("/daily-reports/{reportId}/regeneration")
-    public ResponseEntity<DailyReportResponseDTO> regenerateReport(
+    public ResponseEntity<?> regenerateReport(
             @AuthenticationPrincipal String userId,
             @PathVariable Long projectId,
             @PathVariable Long reportId) {
 
-        // [리포트 권한]
         projectAccessService.validateReportAccess(projectId, userId);
+
+        // 소유자 확인
+        DailyReportResponseDTO report = dailyReportService.getReportDetail(reportId);
+        if (!report.getUserId().equals(userId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("본인의 리포트만 재생성할 수 있습니다.");
+        }
 
         return ResponseEntity.ok(dailyReportService.regenerateReport(reportId));
     }
@@ -171,14 +192,19 @@ public class ReportController {
 
     // 9. AI 채팅 전송
     @PostMapping("/daily-reports/{reportId}/chat")
-    public ResponseEntity<Map<String, Object>> sendChat(
+    public ResponseEntity<?> sendChat(
             @AuthenticationPrincipal String userId,
             @PathVariable Long projectId,
             @PathVariable Long reportId,
             @RequestBody Map<String, String> body) {
 
-        // [리포트 권한]
         projectAccessService.validateReportAccess(projectId, userId);
+
+        // 소유자 확인
+        DailyReportResponseDTO report = dailyReportService.getReportDetail(reportId);
+        if (!report.getUserId().equals(userId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", "본인의 리포트에서만 AI 기능을 사용할 수 있습니다."));
+        }
 
         return ResponseEntity.ok(dailyReportService.sendChatToAI(reportId, body.get("message"), body.get("current_content")));
     }

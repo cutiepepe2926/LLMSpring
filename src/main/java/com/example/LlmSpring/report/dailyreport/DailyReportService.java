@@ -1,6 +1,7 @@
 package com.example.LlmSpring.report.dailyreport;
 
 import com.example.LlmSpring.alarm.AlarmService;
+import com.example.LlmSpring.projectMember.ProjectMemberMapper;
 import com.example.LlmSpring.report.dailyreport.response.DailyReportResponseDTO;
 import com.example.LlmSpring.project.ProjectMapper;
 import com.example.LlmSpring.project.ProjectVO;
@@ -38,6 +39,7 @@ public class DailyReportService {
     private final DailyReportMapper dailyReportMapper;
     private final UserMapper userMapper;
     private final ProjectMapper projectMapper;
+    private final ProjectMemberMapper projectMemberMapper;
     private final EncryptionUtil encryptionUtil;
     private final S3Service s3Service;
     private final AlarmService alarmService;
