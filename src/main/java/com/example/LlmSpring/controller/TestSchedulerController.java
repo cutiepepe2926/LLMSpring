@@ -12,7 +12,6 @@ public class TestSchedulerController {
     private final ProjectScheduler projectScheduler;
 
     // 스케줄러 테스트용 임시 컨트롤러 (지우지 마세용)
-    // 브라우저 주소창에 http://localhost:8080/api/test/scheduler 입력하면 실행됨
     @GetMapping("/api/test/scheduler")
     public String runSchedulerManually() {
         projectScheduler.runDailyProjectCheck();
