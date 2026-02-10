@@ -3,10 +3,13 @@ package com.example.LlmSpring.task;
 import com.example.LlmSpring.alarm.AlarmService;
 import com.example.LlmSpring.task.request.TaskRequestDTO;
 import com.example.LlmSpring.task.response.TaskResponseDTO;
+import com.example.LlmSpring.user.UserMapper;
+import com.example.LlmSpring.user.UserVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -17,11 +20,28 @@ public class TaskService {
 
     private final TaskMapper taskMapper;
     private final AlarmService alarmService;
+    private final UserMapper userMapper;
 
     //권한 조회
     public String getMyRole(Long projectId, String userId) {
         String role = taskMapper.getProjectRole(projectId, userId);
         return role != null ? role : "MEMBER";
+    }
+
+    // 유저 프로필 간편 조회 (채팅 실시간 전송용)
+    public Map<String, Object> getUserProfileSimple(String userId) {
+        UserVO user = userMapper.getUserInfo(userId);
+        Map<String, Object> profile = new HashMap<>();
+
+        if (user != null) {
+            profile.put("name", user.getName());
+            profile.put("filePath", user.getFilePath());
+        } else {
+            // 유저 정보가 없을 경우 기본값 처리
+            profile.put("name", userId);
+            profile.put("filePath", null);
+        }
+        return profile;
     }
 
     // 1. 업무 생성

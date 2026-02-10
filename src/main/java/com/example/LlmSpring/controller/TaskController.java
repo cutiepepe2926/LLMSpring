@@ -198,14 +198,20 @@ public class TaskController {
         String content = body.get("content");
         taskService.addChat(taskId, userId, content);
 
+        // [수정] 실시간 전송 데이터에 이름과 이미지 경로 추가
+        // taskService.getMyRole() 등을 호출할 때 사용하는 UserMapper 등을 통해 조회하거나,
+        // 편의상 taskService에 getUserInfo 메소드가 있다고 가정하고 호출
+        // (직접 구현 시 TaskService에 getUserProfile(userId) 메소드 추가 필요)
+
+        Map<String, Object> userInfo = taskService.getUserProfileSimple(userId); // *TaskService에 이 메소드 추가 필요
+
         Map<String, Object> chatData = new HashMap<>();
         chatData.put("userId", userId);
         chatData.put("content", content);
         chatData.put("taskId", taskId);
-        // 날짜는 프론트엔드에서 현재 시간으로 처리하거나, DB Insert 후 조회해야 하나
-        // 성능상 현재 시간(Instant)을 같이 보내주는 것이 좋음. 여기선 편의상 생략하거나 put.
+        chatData.put("name", userInfo.get("name"));       // 추가됨
+        chatData.put("filePath", userInfo.get("filePath")); // 추가됨
 
-        // [실시간] 채팅 전송 (타입 명시)
         broadcastUpdate(taskId, "CHAT", chatData);
 
         return ResponseEntity.ok("Chat added");

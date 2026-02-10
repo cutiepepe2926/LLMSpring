@@ -74,7 +74,17 @@
     </update>
 
     <select id="selectChats" resultType="map">
-        SELECT * FROM TaskChat WHERE task_id = #{taskId} ORDER BY date ASC
+        SELECT
+            tc.chat_id AS chatId,        tc.task_id AS taskId,
+            tc.user_id AS userId,
+            tc.content,
+            tc.date,
+            u.name AS name,
+            u.file_path AS filePath
+        FROM TaskChat tc
+                 LEFT JOIN User u ON tc.user_id = u.user_id
+        WHERE tc.task_id = #{taskId}
+        ORDER BY tc.date ASC
     </select>
 
     <insert id="insertChat">
