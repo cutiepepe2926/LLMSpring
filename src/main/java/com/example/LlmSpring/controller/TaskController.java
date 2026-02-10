@@ -28,23 +28,20 @@ public class TaskController {
     private final SimpMessagingTemplate messagingTemplate;
     private final ProjectAccessService projectAccessService;
 
+    // --- [웹소켓 공통 전송 메소드] ---
+    private void broadcastUpdate(Long taskId, String type, Object data) {
+        Map<String, Object> message = new HashMap<>();
+        message.put("type", type);
+        message.put("data", data);
+        messagingTemplate.convertAndSend("/sub/tasks/" + taskId, message);
+    }
+
     @GetMapping("/my-role")
     public ResponseEntity<Map<String, String>> getMyRole(
             @AuthenticationPrincipal String userId,
             @PathVariable Long projectId) {
-
-        // [읽기 권한] DELETE 상태면 OWNER만 접근 가능
         projectAccessService.validateReadAccess(projectId, userId);
-
-        System.out.println("=== 권한 조회 요청 ===");
-        System.out.println("User ID: " + userId);
-        System.out.println("Project ID: " + projectId);
-
         String role = taskService.getMyRole(projectId, userId);
-
-        System.out.println("DB 조회 결과 Role: " + role);
-        System.out.println("=====================");
-
         return ResponseEntity.ok(Map.of("role", role));
     }
 
@@ -53,10 +50,7 @@ public class TaskController {
             @AuthenticationPrincipal String userId,
             @PathVariable Long projectId,
             @RequestBody TaskRequestDTO requestDTO) {
-
-        // [쓰기 권한] DONE 또는 DELETE 상태면 접근 불가
         projectAccessService.validateWriteAccess(projectId, userId);
-
         taskService.createTask(projectId, userId, requestDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("message", "Created"));
     }
@@ -65,7 +59,6 @@ public class TaskController {
     public ResponseEntity<List<TaskResponseDTO>> getTaskList(
             @AuthenticationPrincipal String userId,
             @PathVariable Long projectId) {
-        // [읽기 권한]
         projectAccessService.validateReadAccess(projectId, userId);
         return ResponseEntity.ok(taskService.getTaskList(projectId));
     }
@@ -75,8 +68,6 @@ public class TaskController {
             @AuthenticationPrincipal String userId,
             @PathVariable Long projectId,
             @PathVariable Long taskId) {
-
-        // [읽기 권한]
         projectAccessService.validateReadAccess(projectId, userId);
         return ResponseEntity.ok(taskService.getTaskDetail(taskId));
     }
@@ -87,11 +78,15 @@ public class TaskController {
             @PathVariable Long projectId,
             @PathVariable Long taskId,
             @RequestBody Map<String, String> body) {
-
-        // [쓰기 권한]
         projectAccessService.validateWriteAccess(projectId, userId);
 
-        taskService.updateStatus(taskId, userId, body.get("status"));
+        String newStatus = body.get("status");
+        taskService.updateStatus(taskId, userId, newStatus);
+
+        // [실시간] 상태 변경 전송 & 로그 갱신
+        broadcastUpdate(taskId, "STATUS", newStatus);
+        broadcastUpdate(taskId, "LOG", taskService.getLogs(taskId));
+
         return ResponseEntity.ok(Map.of("message", "Status Updated"));
     }
 
@@ -101,11 +96,13 @@ public class TaskController {
             @PathVariable Long projectId,
             @PathVariable Long taskId,
             @RequestBody TaskRequestDTO requestDTO) {
-
-        // [쓰기 권한]
         projectAccessService.validateWriteAccess(projectId, userId);
 
         taskService.updateTask(taskId, userId, requestDTO);
+
+        broadcastUpdate(taskId, "TASK_UPDATE", taskService.getTaskDetail(taskId));
+        broadcastUpdate(taskId, "LOG", taskService.getLogs(taskId));
+
         return ResponseEntity.ok(Map.of("message", "Updated"));
     }
 
@@ -114,11 +111,9 @@ public class TaskController {
             @AuthenticationPrincipal String userId,
             @PathVariable Long projectId,
             @PathVariable Long taskId) {
-
-        // [쓰기 권한]
         projectAccessService.validateWriteAccess(projectId, userId);
-
         taskService.deleteTask(taskId, userId);
+
         return ResponseEntity.ok(Map.of("message", "Deleted"));
     }
 
@@ -127,10 +122,7 @@ public class TaskController {
             @AuthenticationPrincipal String userId,
             @PathVariable Long projectId,
             @PathVariable Long taskId) {
-
-        // [읽기 권한]
         projectAccessService.validateReadAccess(projectId, userId);
-
         return taskService.getCheckLists(taskId);
     }
 
@@ -140,11 +132,14 @@ public class TaskController {
             @PathVariable Long projectId,
             @PathVariable Long taskId,
             @RequestBody Map<String, String> body) {
-
-        // [쓰기 권한]
         projectAccessService.validateWriteAccess(projectId, userId);
 
         taskService.addCheckList(taskId, userId, body.get("content"));
+
+        // [실시간] 체크리스트 목록 & 로그 갱신
+        broadcastUpdate(taskId, "CHECKLIST", taskService.getCheckLists(taskId));
+        broadcastUpdate(taskId, "LOG", taskService.getLogs(taskId));
+
         return ResponseEntity.ok(Map.of("message", "Checklist Added"));
     }
 
@@ -154,11 +149,14 @@ public class TaskController {
             @PathVariable Long projectId,
             @PathVariable Long taskId,
             @PathVariable Long checklistId) {
-
-        // [쓰기 권한]
         projectAccessService.validateWriteAccess(projectId, userId);
 
         taskService.deleteCheckList(taskId, checklistId, userId);
+
+        // [실시간] 체크리스트 목록 & 로그 갱신
+        broadcastUpdate(taskId, "CHECKLIST", taskService.getCheckLists(taskId));
+        broadcastUpdate(taskId, "LOG", taskService.getLogs(taskId));
+
         return ResponseEntity.ok(Map.of("message", "Deleted"));
     }
 
@@ -169,11 +167,14 @@ public class TaskController {
             @PathVariable Long taskId,
             @PathVariable Long checklistId,
             @RequestBody Map<String, Boolean> body) {
-
-        // [쓰기 권한]
         projectAccessService.validateWriteAccess(projectId, userId);
 
         taskService.toggleCheckList(checklistId, body.get("is_done"), taskId, userId);
+
+        // [실시간] 체크리스트 목록 & 로그 갱신
+        broadcastUpdate(taskId, "CHECKLIST", taskService.getCheckLists(taskId));
+        broadcastUpdate(taskId, "LOG", taskService.getLogs(taskId));
+
         return ResponseEntity.ok(Map.of("message", "Toggled"));
     }
 
@@ -182,10 +183,7 @@ public class TaskController {
             @AuthenticationPrincipal String userId,
             @PathVariable Long projectId,
             @PathVariable Long taskId) {
-
-        // [읽기 권한]
         projectAccessService.validateReadAccess(projectId, userId);
-
         return taskService.getChats(taskId);
     }
 
@@ -195,19 +193,21 @@ public class TaskController {
             @PathVariable Long projectId,
             @PathVariable Long taskId,
             @RequestBody Map<String, String> body) {
-
-        // [쓰기 권한]
         projectAccessService.validateWriteAccess(projectId, userId);
 
         String content = body.get("content");
         taskService.addChat(taskId, userId, content);
 
-        Map<String, Object> chatMessage = new HashMap<>();
-        chatMessage.put("userId", userId);
-        chatMessage.put("content", content);
-        chatMessage.put("taskId", taskId);
+        Map<String, Object> chatData = new HashMap<>();
+        chatData.put("userId", userId);
+        chatData.put("content", content);
+        chatData.put("taskId", taskId);
+        // 날짜는 프론트엔드에서 현재 시간으로 처리하거나, DB Insert 후 조회해야 하나
+        // 성능상 현재 시간(Instant)을 같이 보내주는 것이 좋음. 여기선 편의상 생략하거나 put.
 
-        messagingTemplate.convertAndSend("/sub/tasks/" + taskId, chatMessage);
+        // [실시간] 채팅 전송 (타입 명시)
+        broadcastUpdate(taskId, "CHAT", chatData);
+
         return ResponseEntity.ok("Chat added");
     }
 
@@ -216,10 +216,7 @@ public class TaskController {
             @AuthenticationPrincipal String userId,
             @PathVariable Long projectId,
             @PathVariable Long taskId) {
-
-        // [읽기 권한]
         projectAccessService.validateReadAccess(projectId, userId);
-
         return ResponseEntity.ok(taskService.getLogs(taskId));
     }
 }
