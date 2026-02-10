@@ -403,8 +403,8 @@ public class DailyReportService {
         for (String branch : branches) {
             try {
                 String commitsUrl = String.format(
-                        "https://api.github.com/repos/%s/%s/commits?per_page=100&sha=%s&since=%s",
-                        owner, repo, branch, since
+                        "https://api.github.com/repos/%s/%s/commits?per_page=100&sha=%s&since=%s&author=%s",
+                        owner, repo, branch, since, githubId
                 );
 
                 ResponseEntity<List> response = restTemplate.exchange(commitsUrl, HttpMethod.GET, entity, List.class);
