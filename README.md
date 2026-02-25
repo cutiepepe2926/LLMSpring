@@ -6,7 +6,7 @@
 - Backend (Spring Boot): `LLMSpring` (dev)  
 - Frontend (React): `LLMReact` (dev)
 - 프로젝트 수행 기간(계획): **2026.01.09 ~ 2026.02.09**
-- https://github.com/sgn08062/LLMReact 에서 프로젝트 최종 마무리 후 각 개인 프로젝트로 Fork한 버전입니다.
+- https://github.com/sgn08062/LLMSpring 에서 프로젝트 최종 마무리 후 각 개인 프로젝트로 Fork한 버전입니다.
 - 각 개인 환경에 따라 달라질 수 있습니다.  
 ---
 
